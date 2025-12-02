@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.origin.aimodel.dao.mapper.AiModelMapper">
+  <resultMap id="BaseResultMap" type="com.origin.aimodel.domain.mp.AiModelMp">
+    <!--@mbg.generated-->
+    <!--@Table ai_model-->
+    <id column="model_name" jdbcType="VARCHAR" property="modelName" />
+    <result column="in_parameter" jdbcType="VARCHAR" property="inParameter" />
+    <result column="out_parameter" jdbcType="VARCHAR" property="outParameter" />
+    <result column="created_by" jdbcType="VARCHAR" property="createdBy" />
+    <result column="created_time" jdbcType="TIMESTAMP" property="createdTime" />
+    <result column="updated_by" jdbcType="VARCHAR" property="updatedBy" />
+    <result column="updated_time" jdbcType="TIMESTAMP" property="updatedTime" />
+    <result column="del_flag" jdbcType="TINYINT" property="delFlag" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    model_name, in_parameter, out_parameter, created_by, created_time, updated_by, updated_time, 
+    del_flag
+  </sql>
+</mapper>
