@@ -108,7 +108,7 @@ public class OkHttpManager {
 
         Request request = requestBuilder.build();
         String responseBody = executeRequest(request);
-
+        log.info(responseBody);
         return parseResponse(responseBody);
     }
 

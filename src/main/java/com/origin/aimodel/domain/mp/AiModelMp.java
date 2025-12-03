@@ -23,22 +23,43 @@ import lombok.experimental.Accessors;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
-@TableName("ai_model")
+@TableName("dim_ai_model")
 public class AiModelMp extends BaseEntity implements Serializable {
 
     private static final long serialVersionUID = -93706987435890484L;
 
-
     @TableId("model_name")
     private String modelName;
 
+    @TableField("origin_name")
+    private String originName;
+
+    @TableField("base_url")
+    private String basUrl;
+
+    @TableField("point")
+    private String point;
+
+    @TableField("authorization")
+    private String authorization;
 
     @TableField("in_parameter")
     private String inParameter;
 
-
     @TableField("out_parameter")
     private String outParameter;
+
+    @TableField("template_attribute_mapping")
+    private String templateAttributeMapping;
+
+    @TableField("template_header")
+    private String templateHeader;
+
+    @TableField("template_spel")
+    private String templateSpel;
+
+//    @TableField("template_param_plus")
+//    private String templateParamPlus;
 
 
 

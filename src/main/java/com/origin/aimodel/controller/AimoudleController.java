@@ -5,7 +5,8 @@ import com.origin.aimodel.dao.service.AiModelMpService;
 import com.origin.aimodel.domain.mp.AiModelMp;
 import com.origin.aimodel.domain.vo.AiTaskQuery;
 import com.origin.aimodel.domain.vo.AiTaskResult;
-import com.origin.aimodel.service.executor.PostAiModelExecutor;
+
+import com.origin.aimodel.util.spel.SpelDemo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,7 +21,7 @@ public class AimoudleController {
     AiModelMpService aiModelMpServiceImpl;
 
     @Autowired
-    PostAiModelExecutor postAiModelExecutor;
+    SpelDemo spelDemo;
 
     @PostMapping("/add")
     public ResultData<?> add(@RequestBody AiModelMp aiModelMp){
@@ -34,17 +35,17 @@ public class AimoudleController {
     }
 
 
-   @PostMapping("/test/taskStart")
-    public ResultData<?> testTaskStart(@RequestBody AiTaskQuery aiTaskQuery){
-
-       try {
-           AiTaskResult aiTaskResult = postAiModelExecutor.taskStart(aiTaskQuery);
-       }
-       catch (Exception e){
-           return ResultData.fail(e.getMessage());
-       }
-       return ResultData.ok(aiTaskQuery);
-   }
+//   @PostMapping("/test/taskStart")
+//    public ResultData<?> testTaskStart(@RequestBody AiTaskQuery aiTaskQuery){
+//
+//       try {
+//           AiTaskResult aiTaskResult = spelDemo.taskStart(aiTaskQuery);
+//       }
+//       catch (Exception e){
+//           return ResultData.fail(e.getMessage());
+//       }
+//       return ResultData.ok(aiTaskQuery);
+//   }
 
 
 }
