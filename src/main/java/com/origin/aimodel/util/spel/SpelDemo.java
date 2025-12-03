@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.origin.aimodel.config.OkHttpManager;
 import com.origin.aimodel.dao.service.AiModelMpService;
+import com.origin.aimodel.domain.mp.AiModelMp;
 import com.origin.aimodel.domain.vo.AiTaskQuery;
 import com.origin.aimodel.domain.vo.AiTaskResult;
 import lombok.extern.slf4j.Slf4j;
