@@ -97,5 +97,6 @@ public class SpelDemo {
         log.info("模拟提交 -> URL:{} header:{} param:{}", url, header, param);
 //        JSONObject post = okHttpManager.post(url, header, param);
 //        log.info("返回: {}", post);
+//        初始化
     }
 }
