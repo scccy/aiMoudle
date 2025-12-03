@@ -58,8 +58,6 @@ public class AiModelMp extends BaseEntity implements Serializable {
     @TableField("template_spel")
     private String templateSpel;
 
-//    @TableField("template_param_plus")
-//    private String templateParamPlus;
 
 
 

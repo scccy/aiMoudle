@@ -1,10 +1,7 @@
 package com.origin.aimodel.util.spel;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import lombok.Data;
 import lombok.experimental.Accessors;
-import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -35,11 +32,6 @@ public class SpelTemplateConfig {
      * 原始前端 payload JSON（别名参数）
      */
     private String frontPayloadJson;
-
-    /**
-     * 附加参数 JSON（用于描述需要追加的 key/list/map 等结构）
-     */
-    private String paramPlusJson;
 
     /**
      * 别名与真实字段关系 JSON
@@ -121,53 +113,5 @@ public class SpelTemplateConfig {
             contextDataJson = dataJson.replaceFirst("}$", String.format(",\"%s\":\"%s\"}", contextKey, sourceKey));
         }
         return this;
-    }
-
-    public SpelTemplateConfig addParamPlusEntry(String key, Object value) {
-        if (!StringUtils.hasText(key) || value == null) {
-            return this;
-        }
-        JSONObject root = ensureParamPlusObject();
-        root.put(key, value);
-        this.paramPlusJson = root.toJSONString();
-        return this;
-    }
-
-    public SpelTemplateConfig addParamPlusListItem(String listKey, Object value) {
-        if (!StringUtils.hasText(listKey) || value == null) {
-            return this;
-        }
-        JSONObject root = ensureParamPlusObject();
-        JSONArray array = root.getJSONArray(listKey);
-        if (array == null) {
-            array = new JSONArray();
-        }
-        array.add(value);
-        root.put(listKey, array);
-        this.paramPlusJson = root.toJSONString();
-        return this;
-    }
-
-    public SpelTemplateConfig addParamPlusMapEntry(String mapKey, String mapName, Map<String, Object> value) {
-        if (!StringUtils.hasText(mapKey) || !StringUtils.hasText(mapName) || value == null) {
-            return this;
-        }
-        JSONObject root = ensureParamPlusObject();
-        JSONObject mapContainer = root.getJSONObject(mapKey);
-        if (mapContainer == null) {
-            mapContainer = new JSONObject();
-        }
-        mapContainer.put(mapName, value);
-        root.put(mapKey, mapContainer);
-        this.paramPlusJson = root.toJSONString();
-        return this;
-    }
-
-    private JSONObject ensureParamPlusObject() {
-        if (!StringUtils.hasText(this.paramPlusJson)) {
-            return new JSONObject();
-        }
-        JSONObject object = JSONObject.parseObject(this.paramPlusJson);
-        return object == null ? new JSONObject() : object;
     }
 }

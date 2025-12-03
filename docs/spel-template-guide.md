@@ -1,84 +1,127 @@
-# SpEL 模板工具指南
+# SpEL 模板工具指南（基于 AiModelMp）
 
-## 数据流概览
+`AiModelMp` 表承担了模型接入的所有配置，因此本文围绕该实体讲解如何把数据库字段映射到 `SpelTemplateConfig`，并通过 `SpelTemplateEngine` 生成最终的请求 URL/Header/Param。文末保留 `seedream-3.0` 样例，帮助你核对存量数据。
 
-1. **数据库配置阶段**  
-   - `envJson`、`frontPayloadJson`：存储环境变量与前端别名参数，均为 JSON 字符串。  
-   - `aliasMappingJson`：描述别名 → 真实字段映射，例如 `{"a1":"k1"}`。  
-   - `headerTemplateJson` / `paramTemplateJson`：存储 SpEL 模板，值里可使用 `#{#env[...]}` 等表达式。  
-   - `contextVariableJson`：数组结构 `[{"varName":"env","source":"env"}]`，定义要注册到 SpEL 的变量名与上下文 key。  
-   - `contextDataJson`：字典结构 `{"env":"env","payload":"payload"}`，从内置上下文中挑选需要暴露给 SpEL 的对象。  
-   - `paramPlusJson`：可选字段，描述额外需要合并到最终参数中的 key/list/map 结构（如额外 `content`）。  
-   - 可选 `urlTemplate` 字段，用于拼接最终请求地址。  
-   > 对应字段及 JSON 的 key/value 语义见下方“数据库字段说明”章节，便于直接映射为表结构。
+## 1. AiModelMp 字段与 SpEL 配置映射
 
-2. **业务调用阶段**  
-   - 通过 `aiModelMpServiceImpl` 读取上述 JSON，构建 `SpelTemplateConfig`（支持 `@Accessors(chain = true)` 链式调用）。  
-   - 使用 `SpelTemplateEngine#evaluate` 完成：JSON 解析 → 上下文重映射 → 变量注册 → SpEL 求值。  
-   - `evaluate` 返回 `SpelEvaluationResult`，包含 `resolvedUrl`、`resolvedHeader`、`resolvedParam` 及运行期上下文，供 OKHttp 或其它客户端直接使用。
+> 表结构以 `AiModelMp` 实体为准，如有新增列可按同样思路扩展。以下建议在建表/录入时保持 JSON 的可读性与可验证性。
 
-## 工具类使用步骤
+| AiModelMp 字段 | 含义 / 建议内容 | 对应的 SpEL 配置字段 |
+|----------------|----------------|----------------------|
+| `model_name` | 模型唯一标识，业务检索 & 日志打印用 | `SpelTemplateConfig.modelName` |
+| `origin_name` | 可选：底层模型或厂商名 | 作为 `env.origin` 或接入日志字段 |
+| `base_url` | 模型服务根地址，例如 `https://ark.cn-beijing.volces.com/api/v3/` | `envJson.baseUrl` |
+| `point` | 具体路径或资源位，如 `generations/tasks` | `envJson.endpoint`，并用于 `urlTemplate` |
+| `authorization` | Bearer Token 或其他鉴权信息 | `envJson.authorization`，进而注入 Header |
+| `in_parameter` | 前端别名参数的 JSON 示例（`{"a1":"text",...}`）或默认值 | `frontPayloadJson`；调试阶段也可放空对象 `{}` |
+| `template_attribute_mapping` | 别名到真实字段的映射 JSON，例如 `{"a1":"text"}` | `aliasMappingJson` |
+| `template_header` | Header 模板 JSON，value 允许写 SpEL 表达式 | `headerTemplateJson` |
+| `template_spel` | Param 模板 JSON，value 书写 SpEL 表达式 | `paramTemplateJson` |
+| `out_parameter` | 预留字段：可记录期望返回体结构 | 暂未注入 SpEL，可用于调用方做断言 |
 
-1. **组装配置**
-   ```java
-   SpelTemplateConfig config = new SpelTemplateConfig()
-           .setModelName("demo-model")
-           .setUrlTemplate("#{#env['baseUrl']}/invoke/#{#env['traceId']}")
-           .setEnvJson("{\"baseUrl\":\"https://example.com\",\"traceId\":\"t-1\"}")
-           .setFrontPayloadJson("{\"a1\":\"hello\"}")
-           .setAliasMappingJson("{\"a1\":\"k1\"}")
-           .setHeaderTemplateJson("{\"Authorization\":\"Bearer #{#env['token']}\"}")
-           .setParamTemplateJson("{\"k1\":\"#{#payload['k1']}\"}")
-           .setContextVariableJson("[{\"varName\":\"env\",\"source\":\"env\"},{\"varName\":\"payload\",\"source\":\"payload\"}]")
-           .setContextDataJson("{\"env\":\"env\",\"payload\":\"payload\"}")
-           .addBuiltinContext("token", "demo-token")
-           .addParamPlusEntry("watermark", false)
-           .addParamPlusListItem("content", "{\"type\":\"image_url\",\"image_url\":{\"url\":\"https://example.com/demo.png\"}}");
-   ```
+根据上表即可直接构建 `SpelTemplateConfig`，不再需要手写配置。若未来要补充 `contextVariable` 或 `contextData` 等高级能力，建议在 AiModelMp 中新增 JSON 列（例如 `template_context_variable`），再挂接到 `SpelTemplateConfig` 的对应字段。
 
-2. **解析模板**
-   ```java
-   SpelTemplateEngine engine = new SpelTemplateEngine();
-   SpelEvaluationResult result = engine.evaluate(config);
-   log.info("URL={}, header={}, param={}", result.getResolvedUrl(), result.getResolvedHeader(), result.getResolvedParam());
-   ```
+## 2. 从 AiModelMp 构造 SpelTemplateConfig
 
-3. **后续动作**  
-   - 通过 `result.getResolvedHeader()`、`result.getResolvedParam()` 发起 HTTP 请求；  
-   - 若需要调试，可读取 `result.getContextDataSource()` 查看最终注册到 SpEL 的上下文。
+```java
+SpelTemplateConfig config = new SpelTemplateConfig()
+        .setModelName(aiModel.getModelName())
+        .setUrlTemplate("#{#env['baseUrl']}#{#env['endpoint']}")
+        .setEnvJson(JsonUtils.toJson(Map.of(
+                "baseUrl", aiModel.getBasUrl(),
+                "endpoint", aiModel.getPoint(),
+                "authorization", aiModel.getAuthorization(),
+                "origin", aiModel.getOriginName())))
+        .setFrontPayloadJson(defaultIfBlank(aiModel.getInParameter(), "{}"))
+        .setAliasMappingJson(aiModel.getTemplateAttributeMapping())
+        .setHeaderTemplateJson(aiModel.getTemplateHeader())
+        .setParamTemplateJson(aiModel.getTemplateSpel());
+```
 
-## 数据库字段说明
+> `JsonUtils` 仅作示例，使用任何可靠的 JSON 序列化工具均可。`defaultIfBlank` 可替换为自有工具，确保字段为空时仍返回合法 JSON。
 
-| 字段               | JSON 内部 key   | 含义 / 作用                                                                                             |
-|--------------------|-----------------|---------------------------------------------------------------------------------------------------------|
-| `env_json`         | `baseUrl`       | HTTP 基础地址，供 `urlTemplate` 和 Header 中引用。                                                       |
-|                    | `traceId`       | 请求追踪号，可拼入 URL 或 Header。                                                                      |
-|                    | `token`         | 认证 token，通常用于 `Authorization` 模板。                                                             |
-| `front_payload`    | `a1`、`a2` 等   | 前端传入的别名参数（字符串、数值均可）。                                                                |
-| `alias_mapping`    | `a1 -> k1` 等   | 说明别名 `a1` 的值应映射到真实字段 `k1`，供 payloadContext 重建。                                        |
-| `header_template`  | `Authorization` | Header 名称；value 是 SpEL 表达式，如 `Bearer #{#env['token']}`。                                        |
-|                    | `X-Trace-Id`    | 其它 Header；value 同样是 SpEL 表达式。                                                                 |
-| `param_template`   | `k1`、`k2`      | 需要提交的真实参数键；value 为 SpEL 表达式，如 `#{#payload['k1']}` 或 `#{T(java.lang.System).currentTimeMillis()}`。 |
-| `context_variable` | `varName`       | 给 SpEL 注册的变量名，例如 `env`。                                                                      |
-|                    | `source`        | 来源上下文 key，例如 `payload`，需要与 `context_data` 或内置上下文匹配。                                |
-| `context_data`     | `env`、`payload`| 指定在 EvaluationContext 中存放的对象来源，如果 value 为 `env` 表示使用 `env_json` 解析结果。             |
-| `param_plus`       | `content` 等     | 追加配置，例如 `{"content":[{"type":"image_url","image_url":{"url":"..."}}]}`，会在模板求值后自动合并。         |
-| `url_template`     | -               | 单个字符串，SpEL 模板形式的 URL，如 `#{#env['baseUrl']}/invoke/#{#task.modelName}`。                     |
+### 2.1 数据流
+1. **读取配置**：`AiModelMpService` 根据 `model_name` 查询一行记录。
+2. **构造配置对象**：按照上方代码注入 env/payload/alias/template 等 JSON。
+3. **执行引擎**：`SpelTemplateEngine#evaluate(config)` 会完成 JSON 解析、上下文注册与模板求值。
+4. **执行请求**：`SpelEvaluationResult` 返回 `resolvedUrl`、`resolvedHeader`、`resolvedParam`，直接交给 HTTP 客户端。
 
-## 数据库存储示例
+### 2.2 调试与排查
+- `result.getContextDataSource()`：查看最终注入 SpEL 的变量，确认别名映射是否生效。
+- 在 `template_spel` 中引用静态方法（如 `T(java.lang.System).currentTimeMillis()`) 时，应在单测/沙箱环境提前覆盖。
+- 若某个字段未取到值，优先检查 `template_attribute_mapping` 是否遗漏对应别名。
 
-| 字段               | 类型 | 示例                                                                                                                   |
-|--------------------|------|------------------------------------------------------------------------------------------------------------------------|
-| `env_json`         | JSON | `{"baseUrl":"https://mock-ai.service.com","traceId":"trace-1700","token":"demo-token"}`                                |
-| `front_payload`    | JSON | `{"a1":"请以教师身份回答问题","a2":9527}`                                                                              |
-| `alias_mapping`    | JSON | `{"a1":"k1","a2":"k2"}`                                                                                                |
-| `header_template`  | JSON | `{"Authorization":"Bearer #{#env['token']}","X-Trace-Id":"#{#env['traceId']}"}`                                        |
-| `param_template`   | JSON | `{"k1":"#{#payload['k1']}","k2":"#{T(java.lang.System).currentTimeMillis()}","userId":"#{#payload['k2']}"}`           |
-| `context_variable` | JSON | `[{"varName":"env","source":"env"},{"varName":"payload","source":"payload"}]`                                           |
-| `context_data`     | JSON | `{"env":"env","payload":"payload","task":"task"}`                                                                       |
-| `param_plus`       | JSON | `{"content":[{"type":"image_url","image_url":{"url":"https://…/fox.png"}}]}`                                            |
-| `url_template`     | 文本 | `#{#env['baseUrl']}/invoke/#{#task.modelName}?trace=#{#env['traceId']}&user=#{#payload['k2']}`                          |
+## 3. 字段校验清单
 
-> 备注：表字段命名可根据业务调整，核心是保证配置可以完整覆盖上下文、模板与变量映射。
+| 维度 | 校验点 | 说明 |
+|------|--------|------|
+| URL | `base_url` 与 `point` 必须能组成合法地址，结尾 `/` 需统一 | 建议 `base_url` 以 `/` 结尾，`point` 不带 `/` 前缀，避免重复斜杠 |
+| Header | `template_header` 的 value 必须是可执行的 SpEL 字符串 | 例如 `"Authorization":"#{#env['authorization']}"` |
+| Param | `template_spel` 必须是 JSON 字符串，value 允许调用工具类 | 推荐将复杂字符串拼接抽到 Java 工具类，模板内保持可读性 |
+| Payload | `in_parameter` 仅用于示例/默认值，真实入参由前端请求覆盖 | 当字段缺失时，SpEL 求值会返回 `null`，可在模板里用 `?:` 做兜底 |
+| 别名 | `template_attribute_mapping` 需覆盖所有前端可见别名 | 缺失映射会导致 `payload` 中取不到真实字段 |
 
-这样即可在数据库中完全定义模板，业务层只需读取并交给 `SpelTemplateEngine`，实现“无侵入”的动态替换能力。
+## 4. seedream-3.0 实际数据示例
+
+> 以下内容直接引用 `docs/test.md` 中的存量数据，可按此落库。注意 `template_spel` 的 `content` 借助 Fastjson2 解析字符串。
+
+- **env_json（拆分自多列）**
+  ```json
+  {
+    "model": "seedream-3.0",
+    "origin": "doubaoseedream-3-0-t2i-250415",
+    "baseUrl": "https://ark.cn-beijing.volces.com/api/v3/",
+    "endpoint": "generations/tasks",
+    "authorization": "Bearer 166ed6aa"
+  }
+  ```
+
+- **template_attribute_mapping**
+  ```json
+  {"a1": "text", "a2": "resolution", "a3": "ratio", "a4": "duration", "a5": "frames", "a6": "framesPerSecond", "a7": "seed", "a8": "cameraFixed", "a9": "watermark"}
+  ```
+
+- **template_header**
+  ```json
+  {"Content-Type": "application/json", "Authorization": "#{#env['authorization']}"}
+  ```
+
+- **template_spel**
+  ```json
+  {
+    "model": "#{#env['model']}",
+    "content": "#{T(com.alibaba.fastjson2.JSON).parseArray('[{\"type\":\"text\",\"text\":\"'"
+        + #payload['text']
+        + (#payload['resolution'] != null ? ' --resolution ' + #payload['resolution'] : '')
+        + (#payload['ratio'] != null ? ' --ratio ' + #payload['ratio'] : '')
+        + (#payload['duration'] != null ? ' --duration ' + #payload['duration'] : '')
+        + (#payload['frames'] != null ? ' --frames ' + #payload['frames'] : '')
+        + (#payload['framesPerSecond'] != null ? ' --framespersecond ' + #payload['framesPerSecond'] : '')
+        + (#payload['seed'] != null ? ' --seed ' + #payload['seed'] : '')
+        + (#payload['cameraFixed'] != null ? ' --camerafixed ' + #payload['cameraFixed'] : '')
+        + (#payload['watermark'] != null ? ' --watermark ' + #payload['watermark'] : '')
+        + "\"}]')}",
+    "resolution": "#{#payload['resolution']}",
+    "ratio": "#{#payload['ratio']}",
+    "duration": "#{#payload['duration']}",
+    "frames": "#{#payload['frames']}",
+    "frames_per_second": "#{#payload['framesPerSecond']}",
+    "seed": "#{#payload['seed']}",
+    "camera_fixed": "#{#payload['cameraFixed']}",
+    "watermark": "#{#payload['watermark']}"
+  }
+  ```
+
+### 4.1 解析结果核对
+- `resolvedUrl`：`https://ark.cn-beijing.volces.com/api/v3/generations/tasks`
+- `resolvedHeader`：`{"Content-Type":"application/json","Authorization":"Bearer 166ed6aa"}`
+- `resolvedParam`：`content` 通过字符串拼接 + Fastjson2 解析生成，其它字段按别名映射直接取值。
+
+### 4.2 实施提示
+1. 更新 token 或 endpoint 时，仅需修改 `authorization`、`point` 等列，无须代码变更。
+2. 拼接长字符串时建议配合单元测试校验引号与转义，避免 JSON 不合法。
+3. 若未来希望提升可读性，可改用专用工具类（例如 `ContentAssembler`）替换 `content` 内的大段表达式。
+
+---
+
+通过以上规范，可以让 `AiModelMp` 成为所有模型接入的单一事实来源：DB 负责配置，SpEL 负责解析，业务层只做查询与执行，后续新增模型只需插入一行数据即可完成“无代码”集成。

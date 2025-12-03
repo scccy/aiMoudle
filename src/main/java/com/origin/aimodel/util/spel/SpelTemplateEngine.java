@@ -1,6 +1,5 @@
 package com.origin.aimodel.util.spel;
 
-import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
@@ -34,12 +33,8 @@ public class SpelTemplateEngine {
 
         Map<String, Object> envContext = parseJsonToObjectMap(config.getEnvJson());
         Map<String, Object> frontPayload = parseJsonToObjectMap(config.getFrontPayloadJson());
-        Object paramPlus = parseJsonGeneric(config.getParamPlusJson());
         Map<String, String> aliasMapping = parseAliasMappingJson(config.getAliasMappingJson());
         Map<String, Object> payloadContext = remapPayload(frontPayload, aliasMapping);
-        if (paramPlus != null && payloadContext != null) {
-            payloadContext.put("paramPlus", paramPlus);
-        }
 
         Map<String, Object> builtinContext = new LinkedHashMap<>(Optional.ofNullable(config.getBuiltinContext()).orElseGet(LinkedHashMap::new));
         if (envContext != null && !envContext.isEmpty() && StringUtils.hasText(config.getEnvContextKey())) {
@@ -56,7 +51,6 @@ public class SpelTemplateEngine {
 
         Map<String, Object> resolvedHeader = evaluateTemplateMap(parseTemplateJson(config.getHeaderTemplateJson()), evaluationContext);
         Map<String, Object> resolvedParam = evaluateTemplateMap(parseTemplateJson(config.getParamTemplateJson()), evaluationContext);
-        ParamPlusMerger.apply(resolvedParam, paramPlus);
         String resolvedUrl = null;
         if (StringUtils.hasText(config.getUrlTemplate())) {
             resolvedUrl = parser.parseExpression(config.getUrlTemplate(), parserContext).getValue(evaluationContext, String.class);
@@ -120,20 +114,6 @@ public class SpelTemplateEngine {
         }
         return mapping;
     }
-
-    private Object parseJsonGeneric(String json) {
-        if (!StringUtils.hasText(json)) {
-            return null;
-        }
-        try {
-            return JSON.parse(json);
-        } catch (Exception ex) {
-            log.warn("解析 JSON 失败: {}", json, ex);
-            return null;
-        }
-    }
-
-
 
     private List<ContextVariableDefinition> parseContextVariableDefinitions(String contextVariableJson) {
         List<ContextVariableDefinition> definitions = new ArrayList<>();
