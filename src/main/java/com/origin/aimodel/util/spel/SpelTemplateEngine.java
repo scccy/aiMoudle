@@ -2,6 +2,7 @@ package com.origin.aimodel.util.spel;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.origin.aimodel.util.jsonplus.JsonPlusTemplateCodec;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -66,155 +67,7 @@ public class SpelTemplateEngine {
     }
 
     private Map<String, String> parseTemplateJson(String templateJson) {
-        Map<String, String> template = new LinkedHashMap<>();
-        if (!StringUtils.hasText(templateJson)) {
-            return template;
-        }
-        JSONObject jsonObject;
-        String toParse = templateJson;
-        try {
-            jsonObject = JSONObject.parseObject(toParse);
-        } catch (Exception ex) {
-            // 尝试自动转义 SpEL 表达式中的未转义双引号，避免常见拼接错误
-            toParse = escapeSpelQuotes(toParse);
-            try {
-                jsonObject = JSONObject.parseObject(toParse);
-            } catch (Exception retryEx) {
-                // 兜底使用宽松解析，按 key:value 手工拆分，尽可能给出有意义的错误
-                jsonObject = lenientFlatParse(toParse);
-                if (jsonObject == null) {
-                    throw new IllegalArgumentException("模板 JSON 解析失败，检查转义/引号是否正确: " + templateJson, retryEx);
-                }
-            }
-        }
-        if (jsonObject != null) {
-            jsonObject.forEach((key, value) -> template.put(key, value == null ? null : String.valueOf(value)));
-        }
-        // 兜底：如果模板值里残留了 JSON 转义的 \"，会导致 SpEL 中的字符串字面量仍携带反斜杠，这里统一去掉
-        template.replaceAll((k, v) -> unescapeTemplateValue(v));
-        return template;
-    }
-
-    /**
-     * 针对 value 形如 ":{\"#{" ... "}" 的场景，将内部未转义的双引号自动加上反斜杠，避免 JSON 解析失败。
-     * 仅在 parse 失败时作为降级修复。
-     */
-    private String escapeSpelQuotes(String raw) {
-        StringBuilder sb = new StringBuilder(raw.length() + 16);
-        int len = raw.length();
-        int i = 0;
-        boolean inSpelValue = false;
-        while (i < len) {
-            char c = raw.charAt(i);
-            if (!inSpelValue) {
-                if (c == ':') {
-                    sb.append(c);
-                    int j = i + 1;
-                    while (j < len && Character.isWhitespace(raw.charAt(j))) {
-                        sb.append(raw.charAt(j));
-                        j++;
-                    }
-                    if (j + 2 < len && raw.charAt(j) == '"' && raw.charAt(j + 1) == '#' && raw.charAt(j + 2) == '{') {
-                        sb.append('"').append('#').append('{');
-                        i = j + 3;
-                        inSpelValue = true;
-                        continue;
-                    }
-                } else {
-                    sb.append(c);
-                }
-                i++;
-                continue;
-            }
-
-            // in SpEL value
-            if (c == '"' && raw.charAt(i - 1) != '\\') {
-                sb.append('\\').append('"');
-            } else {
-                sb.append(c);
-            }
-            if (c == '}') {
-                int j = i + 1;
-                while (j < len && Character.isWhitespace(raw.charAt(j))) {
-                    j++;
-                }
-                if (j < len && raw.charAt(j) == '"') {
-                    inSpelValue = false;
-                }
-            }
-            i++;
-        }
-        return sb.toString();
-    }
-
-    /**
-     * 宽松解析：仅支持扁平 key:value 结构，按顶层逗号拆分后取字符串值，避免因转义问题导致整体不可解析。
-     */
-    private JSONObject lenientFlatParse(String raw) {
-        String text = raw == null ? "" : raw.trim();
-        if (text.startsWith("{") && text.endsWith("}")) {
-            text = text.substring(1, text.length() - 1);
-        }
-        List<String> pairs = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inQuotes = false;
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c == '"' && (i == 0 || text.charAt(i - 1) != '\\')) {
-                inQuotes = !inQuotes;
-            }
-            if (c == ',' && !inQuotes) {
-                pairs.add(current.toString());
-                current.setLength(0);
-                continue;
-            }
-            current.append(c);
-        }
-        if (current.length() > 0) {
-            pairs.add(current.toString());
-        }
-        JSONObject obj = new JSONObject();
-        for (String pair : pairs) {
-            if (!StringUtils.hasText(pair)) {
-                continue;
-            }
-            int colonIdx = pair.indexOf(':');
-            if (colonIdx <= 0) {
-                continue;
-            }
-            String keyPart = pair.substring(0, colonIdx).trim();
-            String valPart = pair.substring(colonIdx + 1).trim();
-            String key = trimQuotes(keyPart);
-            String value = trimQuotes(valPart);
-            obj.put(key, value);
-        }
-        return obj;
-    }
-
-    private String unescapeTemplateValue(String v) {
-        if (v == null) {
-            return null;
-        }
-        String fixed = v;
-        // 先将多余的反斜杠压缩一层
-        while (fixed.contains("\\\\")) {
-            fixed = fixed.replace("\\\\", "\\");
-        }
-        if (fixed.contains("\\\"")) {
-            fixed = fixed.replace("\\\"", "\"");
-        }
-        return fixed;
-    }
-
-    private String trimQuotes(String text) {
-        if (text == null) {
-            return null;
-        }
-        String t = text.trim();
-        if (t.length() >= 2 && t.charAt(0) == '"' && t.charAt(t.length() - 1) == '"' && t.charAt(t.length() - 2) != '\\') {
-            return t.substring(1, t.length() - 1);
-        }
-        return t;
+        return JsonPlusTemplateCodec.decodeTemplate(templateJson);
     }
 
     private Map<String, Object> parseJsonToObjectMap(String json) {
@@ -224,7 +77,7 @@ public class SpelTemplateEngine {
         JSONObject jsonObject = JSONObject.parseObject(json);
         Map<String, Object> result = new LinkedHashMap<>();
         if (jsonObject != null) {
-            jsonObject.forEach(result::put);
+            result.putAll(jsonObject);
         }
         return result;
     }
