@@ -93,55 +93,65 @@ public class SpelDemo {
 
         // --------------------- 本地字符串模拟 ---------------------
         // 直接使用 docs/test.md 中 seedream-3.0 的实际数据，避免依赖数据库
-        String envJson = "{"
-                + "\"model\":\"seedream-3.0\","
-                + "\"origin\":\"doubaoseedream-3-0-t2i-250415\","
-                + "\"baseUrl\":\"https://ark.cn-beijing.volces.com/api/v3/\","
-                + "\"endpoint\":\"generations/tasks\","
-                + "\"authorization\":\"Bearer 166ed6aa\""
-                + "}";
+        String envJson = """
+                {
+                    "model":"seedream-3.0",
+                    "origin":"doubaoseedream-3-0-t2i-250415",
+                    "baseUrl":"https://ark.cn-beijing.volces.com/api/v3/",
+                    "endpoint":"generations/tasks",
+                    "authorization":"Bearer 166ed6aa"
+                }
+                """;
 
-        String headerTemplateJson = "{"
-                + "\"Content-Type\":\"application/json\","
-                + "\"Authorization\":\"#{#env['authorization']}\""
-                + "}";
+        String headerTemplateJson = """
+                {
+                    "Content-Type":"application/json",
+                    "Authorization":"#{#env['authorization']}"
+                }
+                """;
 
         // 前端别名 -> 实际字段映射，模拟数据库中的 JSON 字符串（保持 Java 8 兼容拼接）
-        String aliasMappingJson = "{"
-                + "\"a1\":\"text\","
-                + "\"a2\":\"resolution\","
-                + "\"a3\":\"ratio\","
-                + "\"a4\":\"duration\","
-                + "\"a5\":\"frames\","
-                + "\"a6\":\"framesPerSecond\","
-                + "\"a7\":\"seed\","
-                + "\"a8\":\"cameraFixed\","
-                + "\"a9\":\"watermark\""
-                + "}";
+        String aliasMappingJson = """
+                {
+                    "a1":"text",
+                    "a2":"resolution",
+                    "a3":"ratio",
+                    "a4":"duration",
+                    "a5":"frames",
+                    "a6":"framesPerSecond",
+                    "a7":"seed",
+                    "a8":"cameraFixed",
+                    "a9":"watermark"
+                }
+                """;
 
         // 参数模板保持“数据库存的纯字符串”，完全按给定的 SpEL 规则写成 JSON 字符串
-        String paramTemplateJson = "{"
-                + "\"model\":\"#{#env['model']}\","
-                + "\"content\":\"#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\\\\"type\\\\\":\\\\\"text\\\\\",\\\\\"text\\\\\":\\\\\"' "
-                + "                + #payload['text']"
-                + "                + (#payload['resolution'] != null ? ' --resolution ' + #payload['resolution'] : '')"
-                + "                + (#payload['ratio'] != null ? ' --ratio ' + #payload['ratio'] : '')"
-                + "                + (#payload['duration'] != null ? ' --duration ' + #payload['duration'] : '')"
-                + "                + (#payload['frames'] != null ? ' --frames ' + #payload['frames'] : '')"
-                + "                + (#payload['framesPerSecond'] != null ? ' --framespersecond ' + #payload['framesPerSecond'] : '')"
-                + "                + (#payload['seed'] != null ? ' --seed ' + #payload['seed'] : '')"
-                + "                + (#payload['cameraFixed'] != null ? ' --camerafixed ' + #payload['cameraFixed'] : '')"
-                + "                + (#payload['watermark'] != null ? ' --watermark ' + #payload['watermark'] : '')"
-                + "                + '\\\\\"}]')}\","
-                + "\"resolution\":\"#{#payload['resolution']}\","
-                + "\"ratio\":\"#{#payload['ratio']}\","
-                + "\"duration\":\"#{#payload['duration']}\","
-                + "\"frames\":\"#{#payload['frames']}\","
-                + "\"frames_per_second\":\"#{#payload['framesPerSecond']}\","
-                + "\"seed\":\"#{#payload['seed']}\","
-                + "\"camera_fixed\":\"#{#payload['cameraFixed']}\","
-                + "\"watermark\":\"#{#payload['watermark']}\""
-                + "}";
+        String paramTemplateJson = """
+                {
+                    "model": "#{#env['model']}",
+                    "content": "#{T(com.alibaba.fastjson2.JSON).parseArray(
+                        '[{\\"type\\":\\"text\\",\\"text\\":\\"' +
+                        #payload['text'] +
+                        (#payload['resolution'] != null ? ' --resolution ' + #payload['resolution'] : '') +
+                        (#payload['ratio'] != null ? ' --ratio ' + #payload['ratio'] : '') +
+                        (#payload['duration'] != null ? ' --duration ' + #payload['duration'] : '') +
+                        (#payload['frames'] != null ? ' --frames ' + #payload['frames'] : '') +
+                        (#payload['framesPerSecond'] != null ? ' --framespersecond ' + #payload['framesPerSecond'] : '') +
+                        (#payload['seed'] != null ? ' --seed ' + #payload['seed'] : '') +
+                        (#payload['cameraFixed'] != null ? ' --camerafixed ' + #payload['cameraFixed'] : '') +
+                        (#payload['watermark'] != null ? ' --watermark ' + #payload['watermark'] : '') +
+                        '\\"}]'
+                    )}",
+                    "resolution": "#{#payload['resolution']}",
+                    "ratio": "#{#payload['ratio']}",
+                    "duration": "#{#payload['duration']}",
+                    "frames": "#{#payload['frames']}",
+                    "frames_per_second": "#{#payload['framesPerSecond']}",
+                    "seed": "#{#payload['seed']}",
+                    "camera_fixed": "#{#payload['cameraFixed']}",
+                    "watermark": "#{#payload['watermark']}"
+                }
+                """;
 
         return new SpelTemplateConfig()
                 .setModelName("seedream-3.0")

@@ -1,0 +1,28 @@
+# Maven build output
+target/
+
+# IntelliJ IDEA / JetBrains
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Compiled classes
+*.class
+
+# Logs / temp files
+*.log
+*.tmp
+*.swp
+
+# Local scratch files used during SpEL experiments
+test.jsh
+TempInspect*.java
+TempInspect*.class
