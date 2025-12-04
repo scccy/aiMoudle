@@ -28,7 +28,7 @@ class AiModelCallApplicationTests {
     @Test
     void spelTemplatePreview() throws IOException {
         AiTaskQuery query = new AiTaskQuery();
-        query.setModelName("seedream-3.0");
+        query.setModelName("chat2");
         Map<String, Object> requestPayload = new HashMap<>();
         requestPayload.put("a1", "小狗101");
         requestPayload.put("a2", "1080p");
@@ -40,8 +40,9 @@ class AiModelCallApplicationTests {
         requestPayload.put("a8", true);
         requestPayload.put("a9", null);
         requestPayload.put("a10", 1);
-        // 增强1模拟：文本强化与 image_url（文本沿用 a1）
-        requestPayload.put("a12", "https://ark-project.tos-cn-beijing.volces.com/doc_image/i2v_foxrgirl.png");
+        // 增强2模拟：文本沿用 a1，追加首尾帧 image_url
+        requestPayload.put("a12", "https://ark-project.tos-cn-beijing.volces.com/doc_image/seepro_first_frame.jpeg");
+        requestPayload.put("a13", "https://ark-project.tos-cn-beijing.volces.com/doc_image/seepro_last_frame.jpeg");
         query.setParams(requestPayload);
         spelDemo.taskStart(query);
     }

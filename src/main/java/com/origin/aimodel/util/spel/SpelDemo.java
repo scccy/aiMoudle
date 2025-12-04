@@ -91,13 +91,26 @@ public class SpelDemo {
 
         // --------------------- 本地字符串模拟 ---------------------
         // 直接使用 docs/test.md 中 seedream-3.0 的实际数据，避免依赖数据库
-        String envJson = "{"
-                + "\"model\":\"seedream-3.0\","
-                + "\"origin\":\"doubaoseedream-3-0-t2i-250415\","
-                + "\"baseUrl\":\"https://ark.cn-beijing.volces.com/api/v3/\","
-                + "\"endpoint\":\"generations/tasks\","
-                + "\"authorization\":\"Bearer 166ed6aa\""
-                + "}";
+        String envJson = null;
+        if ("chat1".equals(aiTaskQuery.getModelName())) {
+             envJson = "{"
+                    + "\"model\":\"chat1\","
+                    + "\"origin\":\"origin-chat1\","
+                    + "\"baseUrl\":\"https://ark.cn-beijing.volces.com/api/v3/\","
+                    + "\"endpoint\":\"generations/tasks\","
+                    + "\"authorization\":\"Bearer 166ed6aa\""
+                    + "}";
+        }else if("chat2".equals(aiTaskQuery.getModelName())) {
+             envJson = "{"
+                    + "\"model\":\"chat2\","
+                    + "\"origin\":\"origin-chat2\","
+                    + "\"baseUrl\":\"https://ark.cn-beijing.volces.com/api/v3/\","
+                    + "\"endpoint\":\"generations/tasks\","
+                    + "\"authorization\":\"Bearer 166ed6aa\""
+                    + "}";
+        }
+
+
 
         String headerTemplateJson = "{"
                 + "\"Content-Type\":\"application/json\","
@@ -141,17 +154,27 @@ public class SpelDemo {
                 + "\"camera_fixed\":\"#{#payload['cameraFixed']}\","
                 + "\"watermark\":\"#{#payload['watermark']}\""
                 + "}";
-
         String paramTemplateJsonPlus = null;
         String aliasMappingJsonPlus = null;
-        // 本地追加模拟（增强1示例）：切换模型 + 文本强化 + 追加 image_url
-//        paramTemplateJsonPlus = "{"
-////                + "\"model\":\"doubao-seedance-1-0-pro-fast-251015\","
-//                + "\"content\":\"#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\\\\"type\\\\\":\\\\\"image_url\\\\\",\\\\\"image_url\\\\\":{\\\\\"url\\\\\":\\\\\"' + #payload['imageUrl'] + '\\\\\"}}]')}\""
+
+        // 增强1：
+         paramTemplateJsonPlus = "{"
+                 + "\"content\":\"#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\\\\"type\\\\\":\\\\\"image_url\\\\\",\\\\\"image_url\\\\\":{\\\\\"url\\\\\":\\\\\"' + #payload['imageUrl'] + '\\\\\"}}]')}\""
+                 + "}";
+         aliasMappingJsonPlus = "{"
+                 + "\"a12\":\"imageUrl\""
+                 + "}";
+
+        // 增强2：
+//       paramTemplateJsonPlus = "{"
+//                + "\"content\":\"#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\\\\"type\\\\\":\\\\\"image_url\\\\\",\\\\\"image_url\\\\\":{\\\\\"url\\\\\":\\\\\"' + #payload['imageUrlFirst'] + '\\\\\"},\\\\\"role\\\\\":\\\\\"first_frame\\\\\"},{\\\\\"type\\\\\":\\\\\"image_url\\\\\",\\\\\"image_url\\\\\":{\\\\\"url\\\\\":\\\\\"' + #payload['imageUrlLast'] + '\\\\\"},\\\\\"role\\\\\":\\\\\"last_frame\\\\\"}]')}\""
 //                + "}";
-//        aliasMappingJsonPlus = "{"
-//                + "\"a12\":\"imageUrl\""
+//       aliasMappingJsonPlus = "{"
+//                + "\"a12\":\"imageUrlFirst\","
+//                + "\"a13\":\"imageUrlLast\""
 //                + "}";
+
+
 
         return new SpelTemplateConfig()
                 .setModelName("seedream-3.0")
