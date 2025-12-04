@@ -32,7 +32,7 @@ class AiModelCallApplicationTests {
         Map<String, Object> requestPayload = new HashMap<>();
         requestPayload.put("a1", "小狗101");
         requestPayload.put("a2", "1080p");
-        requestPayload.put("a3", "16:9");
+        requestPayload.put("a3", "16:12222");
         requestPayload.put("a4", 8);
         requestPayload.put("a5", 32);
         requestPayload.put("a6", 16);
@@ -40,6 +40,8 @@ class AiModelCallApplicationTests {
         requestPayload.put("a8", true);
         requestPayload.put("a9", null);
         requestPayload.put("a10", 1);
+        // 增强1模拟：文本强化与 image_url（文本沿用 a1）
+        requestPayload.put("a12", "https://ark-project.tos-cn-beijing.volces.com/doc_image/i2v_foxrgirl.png");
         query.setParams(requestPayload);
         spelDemo.taskStart(query);
     }

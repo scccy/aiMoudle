@@ -34,7 +34,7 @@ public class SpelTemplateEngine {
 
         Map<String, Object> envContext = parseJsonToObjectMap(config.getEnvJson());
         Map<String, Object> frontPayload = parseJsonToObjectMap(config.getFrontPayloadJson());
-        Map<String, String> aliasMapping = parseAliasMappingJson(config.getAliasMappingJson());
+        Map<String, String> aliasMapping = parseAliasMappingJson(config.getAliasMappingJson(), config.getAliasMappingJsonPlus());
         Map<String, Object> payloadContext = remapPayload(frontPayload, aliasMapping);
 
         Map<String, Object> builtinContext = new LinkedHashMap<>(Optional.ofNullable(config.getBuiltinContext()).orElseGet(LinkedHashMap::new));
@@ -50,8 +50,18 @@ public class SpelTemplateEngine {
         StandardEvaluationContext evaluationContext = new StandardEvaluationContext();
         registerContextVariables(evaluationContext, variableDefinitions, contextDataSource);
 
-        Map<String, Object> resolvedHeader = evaluateTemplateMap(parseTemplateJson(config.getHeaderTemplateJson()), evaluationContext);
-        Map<String, Object> resolvedParam = evaluateTemplateMap(parseTemplateJson(config.getParamTemplateJson()), evaluationContext);
+        Map<String, Object> resolvedHeader = evaluateTemplateMap(parseTemplateJson(config.getHeaderTemplateJson(), null), evaluationContext);
+
+        // 先解析 base param
+        Map<String, Object> resolvedParam = evaluateTemplateMap(parseTemplateJson(config.getParamTemplateJson(), null), evaluationContext);
+        // 若存在 plus，则解析 plus 模板并与 base 结果合并（数组追加、标量覆盖）
+        if (StringUtils.hasText(config.getParamTemplateJsonPlus())) {
+            Map<String, Object> plusParam = evaluateTemplateMap(parseTemplateJson(config.getParamTemplateJsonPlus(), null), evaluationContext);
+            com.alibaba.fastjson2.JSONObject baseObj = com.alibaba.fastjson2.JSONObject.parseObject(com.alibaba.fastjson2.JSON.toJSONString(resolvedParam));
+            com.alibaba.fastjson2.JSONObject plusObj = com.alibaba.fastjson2.JSONObject.parseObject(com.alibaba.fastjson2.JSON.toJSONString(plusParam));
+            com.origin.aimodel.util.jsonplus.JsonPlusMerger.merge(baseObj, plusObj, com.origin.aimodel.util.jsonplus.JsonPlusMerger.MergeStrategy.AUTO);
+            resolvedParam = new LinkedHashMap<>(baseObj);
+        }
         String resolvedUrl = null;
         if (StringUtils.hasText(config.getUrlTemplate())) {
             resolvedUrl = parser.parseExpression(config.getUrlTemplate(), parserContext).getValue(evaluationContext, String.class);
@@ -66,8 +76,10 @@ public class SpelTemplateEngine {
                 .setContextDataSource(contextDataSource);
     }
 
-    private Map<String, String> parseTemplateJson(String templateJson) {
-        return JsonPlusTemplateCodec.decodeTemplate(templateJson);
+    private Map<String, String> parseTemplateJson(String baseJson, String plusJson) {
+        return JsonPlusTemplateCodec.mergeTemplateToMap(
+                baseJson == null ? "" : baseJson,
+                plusJson == null ? "" : plusJson);
     }
 
     private Map<String, Object> parseJsonToObjectMap(String json) {
@@ -96,16 +108,10 @@ public class SpelTemplateEngine {
         return remapped;
     }
 
-    private Map<String, String> parseAliasMappingJson(String aliasMappingJson) {
-        Map<String, String> mapping = new LinkedHashMap<>();
-        if (!StringUtils.hasText(aliasMappingJson)) {
-            return mapping;
-        }
-        JSONObject jsonObject = JSONObject.parseObject(aliasMappingJson);
-        if (jsonObject != null) {
-            jsonObject.forEach((key, value) -> mapping.put(key, value == null ? null : String.valueOf(value)));
-        }
-        return mapping;
+    private Map<String, String> parseAliasMappingJson(String aliasMappingJson, String aliasMappingJsonPlus) {
+        return JsonPlusTemplateCodec.mergeTemplateToMap(
+                aliasMappingJson == null ? "" : aliasMappingJson,
+                aliasMappingJsonPlus == null ? "" : aliasMappingJsonPlus);
     }
 
     private List<ContextVariableDefinition> parseContextVariableDefinitions(String contextVariableJson) {

@@ -27,8 +27,6 @@ public class SpelDemo {
     public AiTaskResult taskStart(AiTaskQuery aiTaskQuery) throws IOException {
 
 
-
-
         // --------------------- 原始数据：模拟数据库或前端输入 ---------------------
         SpelTemplateConfig templateConfig = loadModelTemplateConfig(aiTaskQuery);
         Map<String, Object> params = aiTaskQuery != null && aiTaskQuery.getParams() != null
@@ -50,9 +48,9 @@ public class SpelDemo {
         // --------------------- 转换结果：打印分段日志 ---------------------
 //        log.info("【原始数据】config={}", templateConfig);
 //        log.info("【解析后Map】payloadContext={}, contextDataSource={}", payloadContext, contextDataSource);
-        log.info("【转换结果】解析后URL={}", resolvedUrl);
-        log.info("【转换结果】解析后header={}", resolvedHeader);
-        log.info("【转换结果】解析后param={}", resolvedParam);
+//        log.info("【转换结果】解析后URL={}", resolvedUrl);
+//        log.info("【转换结果】解析后header={}", resolvedHeader);
+//        log.info("【转换结果】解析后param={}", resolvedParam);
 
         // --------------------- 提交阶段：可替换为真实 HTTP 调用 ---------------------
         postDemo(resolvedUrl, resolvedHeader, resolvedParam);
@@ -119,9 +117,10 @@ public class SpelDemo {
                 + "\"a9\":\"watermark\""
                 + "}";
 
+
         // 参数模板保持“数据库存的纯字符串”，完全按给定的 SpEL 规则写成 JSON 字符串
         String paramTemplateJson = "{"
-                + "\"model\":\"#{#env['model']}\","
+                + "\"model\":\"#{#env['origin']}\","
                 + "\"content\":\"#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\\\\"type\\\\\":\\\\\"text\\\\\",\\\\\"text\\\\\":\\\\\"' "
                 + "                + #payload['text']"
                 + "                + (#payload['resolution'] != null ? ' --resolution ' + #payload['resolution'] : '')"
@@ -143,17 +142,36 @@ public class SpelDemo {
                 + "\"watermark\":\"#{#payload['watermark']}\""
                 + "}";
 
+        String paramTemplateJsonPlus = null;
+        String aliasMappingJsonPlus = null;
+        // 本地追加模拟（增强1示例）：切换模型 + 文本强化 + 追加 image_url
+//        paramTemplateJsonPlus = "{"
+////                + "\"model\":\"doubao-seedance-1-0-pro-fast-251015\","
+//                + "\"content\":\"#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\\\\"type\\\\\":\\\\\"image_url\\\\\",\\\\\"image_url\\\\\":{\\\\\"url\\\\\":\\\\\"' + #payload['imageUrl'] + '\\\\\"}}]')}\""
+//                + "}";
+//        aliasMappingJsonPlus = "{"
+//                + "\"a12\":\"imageUrl\""
+//                + "}";
+
         return new SpelTemplateConfig()
                 .setModelName("seedream-3.0")
                 .setUrlTemplate("#{#env['baseUrl']}#{#env['endpoint']}")
                 .setEnvJson(envJson)
                 .setAliasMappingJson(aliasMappingJson)
+                .setAliasMappingJsonPlus(aliasMappingJsonPlus)
                 .setHeaderTemplateJson(headerTemplateJson)
-                .setParamTemplateJson(paramTemplateJson);
+                .setParamTemplateJson(paramTemplateJson)
+                .setParamTemplateJsonPlus(paramTemplateJsonPlus);
     }
 
     public void postDemo(String url, Map<String, Object> header, Map<String, Object> param) throws IOException {
-        log.info("模拟提交 -> URL:{} header:{} param:{}", url, header, param);
+//        log.info("模拟提交 -> URL:{} header:{} param:{}", url, header, param);
+        String jsonParam = JSON.toJSONString(param);
+        String headerParam = JSON.toJSONString(header);
+        String urlParam = JSON.toJSONString(url);
+        log.info("url:{}", urlParam);
+        log.info("header:{}", headerParam);
+        log.info("param:{}", jsonParam);
 //        JSONObject post = okHttpManager.post(url, header, param);
 //        log.info("返回: {}", post);
 //        初始化

@@ -60,6 +60,25 @@ public final class JsonPlusTemplateCodec {
         return JSONObject.toJSONString(new LinkedHashMap<>(template));
     }
 
+    /**
+     * 合并两个模板 JSON 字符串，返回 Map（plus 覆盖 base，同层次追加）。
+     */
+    public static Map<String, String> mergeTemplateToMap(String baseJson, String plusJson) {
+        Map<String, String> base = decodeTemplate(baseJson);
+        Map<String, String> plus = decodeTemplate(plusJson);
+        if (plus != null) {
+            plus.forEach(base::put);
+        }
+        return base;
+    }
+
+    /**
+     * 合并两个模板 JSON 字符串，返回合并后的 JSON 字符串。
+     */
+    public static String mergeTemplate(String baseJson, String plusJson) {
+        return encodeTemplate(mergeTemplateToMap(baseJson, plusJson));
+    }
+
     private static String escapeSpelQuotes(String raw) {
         StringBuilder sb = new StringBuilder(raw.length() + 16);
         int len = raw.length();

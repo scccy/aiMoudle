@@ -39,6 +39,11 @@ public class SpelTemplateConfig {
     private String aliasMappingJson;
 
     /**
+     * 追加别名映射的增量 JSON（可选）
+     */
+    private String aliasMappingJsonPlus;
+
+    /**
      * Header 动态模板 JSON
      */
     private String headerTemplateJson;
@@ -47,6 +52,11 @@ public class SpelTemplateConfig {
      * Param 动态模板 JSON
      */
     private String paramTemplateJson;
+
+    /**
+     * Param 动态模板增量 JSON（可选）
+     */
+    private String paramTemplateJsonPlus;
 
     /**
      * SpEL 变量定义 JSON 数组，默认注册 env/payload/task
@@ -112,6 +122,42 @@ public class SpelTemplateConfig {
         } else if (!dataJson.contains("\"" + contextKey + "\"")) {
             contextDataJson = dataJson.replaceFirst("}$", String.format(",\"%s\":\"%s\"}", contextKey, sourceKey));
         }
+        return this;
+    }
+
+    /**
+     * 追加增量 alias 映射，保持 JSON 字符串形态
+     */
+    public SpelTemplateConfig addAliasMappingPlus(String alias, String realKey) {
+        if (alias == null || realKey == null) {
+            return this;
+        }
+        String baseJson = aliasMappingJsonPlus;
+        if (baseJson == null || baseJson.trim().isEmpty()) {
+            baseJson = "{}";
+        }
+        String merged = com.origin.aimodel.util.jsonplus.JsonPlusTemplateCodec.encodeTemplate(
+                com.origin.aimodel.util.jsonplus.JsonPlusTemplateCodec.mergeTemplateToMap(baseJson,
+                        String.format("{\"%s\":\"%s\"}", alias, realKey)));
+        this.aliasMappingJsonPlus = merged;
+        return this;
+    }
+
+    /**
+     * 追加增量 param 模板，保持 JSON 字符串形态
+     */
+    public SpelTemplateConfig addParamTemplatePlus(String key, String spelExpr) {
+        if (key == null || spelExpr == null) {
+            return this;
+        }
+        String baseJson = paramTemplateJsonPlus;
+        if (baseJson == null || baseJson.trim().isEmpty()) {
+            baseJson = "{}";
+        }
+        String merged = com.origin.aimodel.util.jsonplus.JsonPlusTemplateCodec.encodeTemplate(
+                com.origin.aimodel.util.jsonplus.JsonPlusTemplateCodec.mergeTemplateToMap(baseJson,
+                        String.format("{\"%s\":\"%s\"}", key, spelExpr)));
+        this.paramTemplateJsonPlus = merged;
         return this;
     }
 }
