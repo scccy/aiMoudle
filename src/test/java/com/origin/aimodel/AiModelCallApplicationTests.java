@@ -28,57 +28,23 @@ class AiModelCallApplicationTests {
     @Test
     void spelTemplatePreview() throws IOException {
         AiTaskQuery query = new AiTaskQuery();
-        query.setModelName("chat2");
+        query.setModelName("video2");
         Map<String, Object> requestPayload = new HashMap<>();
-        requestPayload.put("a1", "小狗101");
-        requestPayload.put("a2", "1080p");
-        requestPayload.put("a3", "16:12222");
-        requestPayload.put("a4", 8);
-        requestPayload.put("a5", 32);
-        requestPayload.put("a6", 16);
-        requestPayload.put("a7", 123456789L);
-        requestPayload.put("a8", true);
-        requestPayload.put("a9", null);
+        requestPayload.put("a1", "小猫在后空翻");
+//        requestPayload.put("a2", "1080p");
+//        requestPayload.put("a3", "16:12222");
+//        requestPayload.put("a4", 8);
+//        requestPayload.put("a5", 32);
+//        requestPayload.put("a6", 16);
+//        requestPayload.put("a7", 123456789L);
+//        requestPayload.put("a8", true);
+//        requestPayload.put("a9", null);
         requestPayload.put("a10", 1);
         // 增强2模拟：文本沿用 a1，追加首尾帧 image_url
-        requestPayload.put("a12", "https://ark-project.tos-cn-beijing.volces.com/doc_image/seepro_first_frame.jpeg");
+        requestPayload.put("a12", "https://b0.bdstatic.com/ugc/zvzOJuVeTtOKY7th7APUKQ4a77fedc16936b3ed5cdf694bd28674e.jpg");
         requestPayload.put("a13", "https://ark-project.tos-cn-beijing.volces.com/doc_image/seepro_last_frame.jpeg");
         query.setParams(requestPayload);
         spelDemo.taskStart(query);
     }
 
-    @Test
-    void test(){
-        // 支持多种横杠: 英文 - 和 --，中文 – 和 ——，可有可无空格
-        Pattern TIME_RANGE_PATTERN = Pattern.compile(
-                "(\\d{2}:\\d{2})\\s*([\\-–—]{1,2})\\s*(\\d{2}:\\d{2})"
-        );
-
-            String[] texts = {
-                    "09:00-18:00",
-                    "09:00 -- 18:00",
-                    "09:00–18:00",
-                    "09:00——18:00",
-                    " 09:00 - 18:00 ",
-                    "09:00—18:00",
-                    "09:00——18:00",
-                    "09:00-18:00",
-                    "09:00--18:00",
-                    "09:00-18:00",
-                    "09:00--18:00",
-
-            };
-
-            for (String text : texts) {
-                Matcher matcher = TIME_RANGE_PATTERN.matcher(text);
-                if (matcher.find()) {
-                    System.out.println("匹配成功: " + text);
-                    System.out.println("开始时间: " + matcher.group(1));
-                    System.out.println("结束时间: " + matcher.group(3));
-                    System.out.println("------");
-                } else {
-                    System.out.println("未匹配: " + text);
-                }
-            }
-        }
 }
