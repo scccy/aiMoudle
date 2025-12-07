@@ -15,7 +15,7 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ai-model?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8}
-    username: ${MYSQL_USERNAME:root}
+    username: ${MYSQL_USERNAME:aimodel}
     password: ${MYSQL_PASSWORD:XdiwWEW15e}
     hikari:
       minimum-idle: 5

@@ -53,6 +53,7 @@ public class SpelDemo {
         log.info("【转换结果】解析后URL={}", resolvedUrl);
         log.info("【转换结果】解析后header={}", resolvedHeader);
         log.info("【转换结果】解析后param={}", resolvedParam);
+        log.info("【转换结果】解析后contextDataSource={}", contextDataSource);
 
         // --------------------- 提交阶段：可替换为真实 HTTP 调用 ---------------------
         postDemo(resolvedUrl, resolvedHeader, resolvedParam);
@@ -63,52 +64,44 @@ public class SpelDemo {
      * 根据模型名称加载模板配置（可替换为真实的数据库读取）
      */
     private SpelTemplateConfig loadModelTemplateConfig(AiTaskQuery aiTaskQuery) {
-        //        todo:
-        // 兜底处理空对象，避免解析时出现 NPE
-        AiTaskQuery safeQuery = aiTaskQuery == null ? new AiTaskQuery() : aiTaskQuery;
-        if (safeQuery.getModelName() == null) {
-            safeQuery.setModelName("default-model");
-        }
-
-
-//        实际数据库调用
-        AiModelMp aiModelMp = aiModelMpServiceImpl.lambdaQuery().eq(AiModelMp::getModelName, safeQuery.getModelName()).one();
-        if (aiModelMp == null) {
-            throw new IllegalArgumentException("未找到模型配置: " + safeQuery.getModelName());
-        }
-
-
-
-//       String envJson = "{"
-//                    + "\"model\":\"chat1\","
-//                    + "\"origin\":\"origin-chat1\","
-//                    + "\"baseUrl\":\"https://ark.cn-beijing.volces.com/api/v3/\","
-//                    + "\"endpoint\":\"generations/tasks\","
-//                    + "\"authorization\":\"Bearer 166ed6aa\""
-//                    + "}";
-        JSONObject envJson =  new JSONObject();
-        envJson.put("model",  aiModelMp.getOriginName());
-        envJson.put("origin", aiModelMp.getOriginName());
-        envJson.put("baseUrl", aiModelMp.getBasUrl());
-        envJson.put("endpoint", aiModelMp.getPoint());
-        envJson.put("authorization", aiModelMp.getAuthorization());
-
-
-        return new SpelTemplateConfig()
-                .setModelName(aiModelMp.getOriginName())
-                .setUrlTemplate("#{#env['baseUrl']}#{#env['endpoint']}")
-                .setEnvJson(envJson.toString())
-                .setAliasMappingJson(aiModelMp.getTemplateAttributeMapping())
-                .setAliasMappingJsonPlus(aiModelMp.getAliasMappingJsonPlus())
-                .setParamTemplateJsonPlus(aiModelMp.getTemplateParamTJsonPlus())
-                .setHeaderTemplateJson(aiModelMp.getTemplateHeader())
-                .setParamTemplateJson(aiModelMp.getTemplateSpel());
+//        //
+//        // 兜底处理空对象，避免解析时出现 NPE
+//        AiTaskQuery safeQuery = aiTaskQuery == null ? new AiTaskQuery() : aiTaskQuery;
+//        if (safeQuery.getModelName() == null) {
+//            safeQuery.setModelName("default-model");
+//        }
+//
+//
+////        实际数据库调用
+//        AiModelMp aiModelMp = aiModelMpServiceImpl.lambdaQuery().eq(AiModelMp::getModelName, safeQuery.getModelName()).one();
+//        if (aiModelMp == null) {
+//            throw new IllegalArgumentException("未找到模型配置: " + safeQuery.getModelName());
+//        }
+//
+//
+//
+//        JSONObject envJson =  new JSONObject();
+//        envJson.put("model",  aiModelMp.getOriginName());
+//        envJson.put("origin", aiModelMp.getOriginName());
+//        envJson.put("baseUrl", aiModelMp.getBasUrl());
+//        envJson.put("endpoint", aiModelMp.getPoint());
+//        envJson.put("authorization", aiModelMp.getAuthorization());
+//
+//
+//        return new SpelTemplateConfig()
+//                .setModelName(aiModelMp.getOriginName())
+//                .setUrlTemplate("#{#env['baseUrl']}#{#env['endpoint']}")
+//                .setEnvJson(envJson.toString())
+//                .setAliasMappingJson(aiModelMp.getTemplateAttributeMapping())
+//                .setAliasMappingJsonPlus(aiModelMp.getAliasMappingJsonPlus())
+//                .setParamTemplateJsonPlus(aiModelMp.getTemplateParamTJsonPlus())
+//                .setHeaderTemplateJson(aiModelMp.getTemplateHeader())
+//                .setParamTemplateJson(aiModelMp.getTemplateSpel());
 
 
         // --------------------- 本地字符串模拟 ---------------------
         // 直接使用 docs/test.md 中 seedream-3.0 的实际数据，避免依赖数据库
 //        String envJson = null;
-//        if ("chat1".equals(aiTaskQuery.getModelName())) {
 //             envJson = "{"
 //                    + "\"model\":\"chat1\","
 //                    + "\"origin\":\"origin-chat1\","
@@ -116,102 +109,135 @@ public class SpelDemo {
 //                    + "\"endpoint\":\"generations/tasks\","
 //                    + "\"authorization\":\"Bearer 166ed6aa\""
 //                    + "}";
-//        }else if("chat2".equals(aiTaskQuery.getModelName())) {
-//             envJson = "{"
-//                    + "\"model\":\"chat2\","
-//                    + "\"origin\":\"origin-chat2\","
-//                    + "\"baseUrl\":\"https://ark.cn-beijing.volces.com/api/v3/\","
-//                    + "\"endpoint\":\"generations/tasks\","
-//                    + "\"authorization\":\"Bearer 166ed6aa\""
-//                    + "}";
-//        }
 
 
-
-//        String headerTemplateJson = "{"
-//                + "\"Content-Type\":\"application/json\","
-//                + "\"Authorization\":\"#{#env['authorization']}\""
-//                + "}";
-
-        // 前端别名 -> 实际字段映射，模拟数据库中的 JSON 字符串（保持 Java 8 兼容拼接）
-//        String aliasMappingJson = "{"
-//                + "\"a1\":\"text\","
-//                + "\"a2\":\"resolution\","
-//                + "\"a3\":\"ratio\","
-//                + "\"a4\":\"duration\","
-//                + "\"a5\":\"frames\","
-//                + "\"a6\":\"framesPerSecond\","
-//                + "\"a7\":\"seed\","
-//                + "\"a8\":\"cameraFixed\","
-//                + "\"a9\":\"watermark\""
-//                + "}";
+        JSONObject envJson = new JSONObject();
+        envJson.put("model", "video1");
+        envJson.put("origin", "doubao-seedance-1-0-pro-250528");
+        envJson.put("model_plus", "doubao-seedance-1-0-lite-i2v-250428");
+        envJson.put("baseUrl", "https://ark.cn-beijing.volces.com/api/v3/");
+        envJson.put("endpoint", "contents/generations/tasks");
+        envJson.put("authorization", "Bearer 166ed6aa");
 
 
-        // 参数模板保持“数据库存的纯字符串”，完全按给定的 SpEL 规则写成 JSON 字符串
-//        String paramTemplateJson = "{"
-//                + "\"model\":\"#{#env['origin']}\","
-//                + "\"content\":\"#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\\\\"type\\\\\":\\\\\"text\\\\\",\\\\\"text\\\\\":\\\\\"' "
-//                + "                + #payload['text']"
-//                + "                + (#payload['resolution'] != null ? ' --resolution ' + #payload['resolution'] : '')"
-//                + "                + (#payload['ratio'] != null ? ' --ratio ' + #payload['ratio'] : '')"
-//                + "                + (#payload['duration'] != null ? ' --duration ' + #payload['duration'] : '')"
-//                + "                + (#payload['frames'] != null ? ' --frames ' + #payload['frames'] : '')"
-//                + "                + (#payload['framesPerSecond'] != null ? ' --framespersecond ' + #payload['framesPerSecond'] : '')"
-//                + "                + (#payload['seed'] != null ? ' --seed ' + #payload['seed'] : '')"
-//                + "                + (#payload['cameraFixed'] != null ? ' --camerafixed ' + #payload['cameraFixed'] : '')"
-//                + "                + (#payload['watermark'] != null ? ' --watermark ' + #payload['watermark'] : '')"
-//                + "                + '\\\\\"}]')}\","
-//                + "\"resolution\":\"#{#payload['resolution']}\","
-//                + "\"ratio\":\"#{#payload['ratio']}\","
-//                + "\"duration\":\"#{#payload['duration']}\","
-//                + "\"frames\":\"#{#payload['frames']}\","
-//                + "\"frames_per_second\":\"#{#payload['framesPerSecond']}\","
-//                + "\"seed\":\"#{#payload['seed']}\","
-//                + "\"camera_fixed\":\"#{#payload['cameraFixed']}\","
-//                + "\"watermark\":\"#{#payload['watermark']}\""
-//                + "}";
-//        String paramTemplateJsonPlus = null;
-//        String aliasMappingJsonPlus = null;
+        String headerTemplateJson = """
+                {
+                  "Content-Type": "application/json",
+                  "Authorization": "#{#env['authorization']}"
+                }""";
 
-        // 增强1：
-//         paramTemplateJsonPlus = "{"
-//                 + "\"content\":\"#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\\\\"type\\\\\":\\\\\"image_url\\\\\",\\\\\"image_url\\\\\":{\\\\\"url\\\\\":\\\\\"' + #payload['imageUrl'] + '\\\\\"}}]')}\""
-//                 + "}";
-//         aliasMappingJsonPlus = "{"
-//                 + "\"a12\":\"imageUrl\""
-//                 + "}";
-
-        // 增强2：
-//       paramTemplateJsonPlus = "{"
-//                + "\"content\":\"#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\\\\"type\\\\\":\\\\\"image_url\\\\\",\\\\\"image_url\\\\\":{\\\\\"url\\\\\":\\\\\"' + #payload['imageUrlFirst'] + '\\\\\"},\\\\\"role\\\\\":\\\\\"first_frame\\\\\"},{\\\\\"type\\\\\":\\\\\"image_url\\\\\",\\\\\"image_url\\\\\":{\\\\\"url\\\\\":\\\\\"' + #payload['imageUrlLast'] + '\\\\\"},\\\\\"role\\\\\":\\\\\"last_frame\\\\\"}]')}\""
-//                + "}";
-//       aliasMappingJsonPlus = "{"
-//                + "\"a12\":\"imageUrlFirst\","
-//                + "\"a13\":\"imageUrlLast\""
-//                + "}";
+//         前端别名 -> 实际字段映射，模拟数据库中的 JSON 字符串（保持 Java 8 兼容拼接）
+        String aliasMappingJson = """
+                {
+                  "a1": "text",
+                  "a2": "resolution",
+                  "a3": "ratio",
+                  "a4": "duration",
+                  "a5": "frames",
+                  "a6": "framesPerSecond",
+                  "a7": "seed",
+                  "a8": "cameraFixed",
+                  "a9": "watermark"
+                }
+                """;
 
 
+//         参数模板保持“数据库存的纯字符串”，完全按给定的 SpEL 规则写成 JSON 字符串
+        String paramTemplateJson = """
+                {
+                  "model": "#{#env['origin']}",
+                  "content": "#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\"type\\":\\"text\\",\\"text\\":\\"' 
+                                + #payload['text']
+                                + (#payload['resolution'] != null ? ' --resolution ' + #payload['resolution'] : '')
+                                + (#payload['ratio'] != null ? ' --ratio ' + #payload['ratio'] : '')
+                                + (#payload['duration'] != null ? ' --duration ' + #payload['duration'] : '')
+                                + (#payload['frames'] != null ? ' --frames ' + #payload['frames'] : '')
+                                + (#payload['framesPerSecond'] != null ? ' --framespersecond ' + #payload['framesPerSecond'] : '')
+                                + (#payload['seed'] != null ? ' --seed ' + #payload['seed'] : '')
+                                + (#payload['cameraFixed'] != null ? ' --camerafixed ' + #payload['cameraFixed'] : '')
+                                + (#payload['watermark'] != null ? ' --watermark ' + #payload['watermark'] : '')
+                                + '\\"}]')}",
+                  "resolution": "#{#payload['resolution']}",
+                  "ratio": "#{#payload['ratio']}",
+                  "duration": "#{#payload['duration']}",
+                  "frames": "#{#payload['frames']}",
+                  "frames_per_second": "#{#payload['framesPerSecond']}",
+                  "seed": "#{#payload['seed']}",
+                  "camera_fixed": "#{#payload['cameraFixed']}",
+                  "watermark": "#{#payload['watermark']}"
+                }
+                """;
+        String paramTemplateJsonPlus = null;
+        String aliasMappingJsonPlus = null;
 
-//        return new SpelTemplateConfig()
-//                .setModelName("seedream-3.0")
-//                .setUrlTemplate("#{#env['baseUrl']}#{#env['endpoint']}")
-//                .setEnvJson(envJson)
-//                .setAliasMappingJson(aliasMappingJson)
-//                .setAliasMappingJsonPlus(aliasMappingJsonPlus)
-//                .setHeaderTemplateJson(headerTemplateJson)
-//                .setParamTemplateJson(paramTemplateJson)
-//                .setParamTemplateJsonPlus(paramTemplateJsonPlus);
+//         增强1：单图追加（保留原逻辑，注释停用）
+//        paramTemplateJsonPlus = """
+//                {
+//                  "content": "#{T(com.alibaba.fastjson2.JSON).parseArray(
+//                  '[{\\"type\\":\\"image_url\\",
+//                  \\"image_url\\":{\\"url\\":\\"' + #payload['imageUrl'] + '\\"}}]')}"
+//                }
+//                """;
+//        aliasMappingJsonPlus = """
+//               {
+//               "a12": "imageUrl"
+//               }
+//               """;
+
+//         增强2：首/尾帧（保留原逻辑，注释停用）
+//        paramTemplateJsonPlus = """
+//                {
+//                    "content": "#{T(com.alibaba.fastjson2.JSON).parseArray('
+//                    [{\\"type\\":\\"image_url\\",\\"image_url\\":{\\"url\\":\\"' + #payload['imageUrlFirst'] + '\\"},
+//                    \\"role\\":\\"first_frame\\"},
+//                    {\\"type\\":\\"image_url\\",\\"image_url\\":{\\"url\\":\\"' + #payload['imageUrlLast'] + '\\"},
+//                    \\"role\\":\\"last_frame\\"}]')}"
+//                }
+//                """;
+//        aliasMappingJsonPlus = """
+//                {
+//                    "a12": "imageUrlFirst",
+//                    "a13": "imageUrlLast"
+//                }
+//                """;
+
+//         增强3：lite 模型 + 多参考图 role=reference_image
+        paramTemplateJsonPlus = """
+                {
+                  "model": "#{#payload['model_plus'] ?: #env['model_plus'] ?: 'doubao-seedance-1-0-lite-i2v-250428'}",
+                  "content": "#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\"type\\":\\"image_url\\",\\"image_url\\":{\\"url\\":\\"' + #payload['refImage1'] + '\\"},\\"role\\":\\"reference_image\\"},{\\"type\\":\\"image_url\\",\\"image_url\\":{\\"url\\":\\"' + #payload['refImage2'] + '\\"},\\"role\\":\\"reference_image\\"},{\\"type\\":\\"image_url\\",\\"image_url\\":{\\"url\\":\\"' + #payload['refImage3'] + '\\"},\\"role\\":\\"reference_image\\"}]')}"
+                }
+                """;
+        aliasMappingJsonPlus = """
+                {
+                  "a12": "refImage1",
+                  "a13": "refImage2",
+                  "a14": "refImage3",
+                  "a15": "model_plus"
+                }
+                """;
+
+        return new SpelTemplateConfig()
+                .setModelName("seedream-3.0")
+                .setUrlTemplate("#{#env['baseUrl']}#{#env['endpoint']}")
+                .setEnvJson(envJson.toString())
+                .setAliasMappingJson(aliasMappingJson)
+                .setAliasMappingJsonPlus(aliasMappingJsonPlus)
+                .setHeaderTemplateJson(headerTemplateJson)
+                .setParamTemplateJson(paramTemplateJson)
+                .setParamTemplateJsonPlus(paramTemplateJsonPlus);
     }
 
     public void postDemo(String url, Map<String, Object> header, Map<String, Object> param) throws IOException {
         String jsonParam = JSON.toJSONString(param);
         String headerParam = JSON.toJSONString(header);
         String urlParam = JSON.toJSONString(url);
+        log.info("-----------模拟实际请求-----------");
         log.info("url:{}", urlParam);
         log.info("header:{}", headerParam);
         log.info("param:{}", jsonParam);
-        JSONObject post = okHttpManager.post(url, header, param);
-        log.info("post:{}", post);
+//        JSONObject post = okHttpManager.post(url, header, param);
+//        log.info("post:{}", post);
 //        log.info("返回: {}", post);
 //        初始化
     }
