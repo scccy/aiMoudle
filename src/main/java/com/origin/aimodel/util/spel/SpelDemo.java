@@ -29,7 +29,7 @@ public class SpelDemo {
     public AiTaskResult taskStart(AiTaskQuery aiTaskQuery) throws IOException {
 
 
-        // --------------------- 原始数据：模拟数据库或前端输入 ---------------------
+        // --------------------- 原始数据：模拟数据库或前端输入（addkey/addlist/addmap） ---------------------
         SpelTemplateConfig templateConfig = loadModelTemplateConfig(aiTaskQuery);
         Map<String, Object> params = aiTaskQuery != null && aiTaskQuery.getParams() != null
                 ? aiTaskQuery.getParams()
@@ -170,6 +170,8 @@ public class SpelDemo {
         String paramTemplateJsonPlus = null;
         String aliasMappingJsonPlus = null;
         String aliasPatchJson = null;
+        String paramPatchTemplateJson = null;
+        String arrayPatchTemplateJson = null;
 
 //         增强1：单图追加（保留原逻辑，注释停用）
 //        paramTemplateJsonPlus = """
@@ -208,12 +210,12 @@ public class SpelDemo {
                   "a15": "model_plus"
                 }
                 """;
-        String paramPatchTemplateJson = """
+         paramPatchTemplateJson = """
                 {
                   "model": "#{#payload['model_plus'] ?: #env['model_plus'] ?: 'doubao-seedance-1-0-lite-i2v-250428'}"
                 }
                 """;
-        String arrayPatchTemplateJson = """
+         arrayPatchTemplateJson = """
                 #{T(com.alibaba.fastjson2.JSON).parseArray(T(com.alibaba.fastjson2.JSON).toJSONString(#payload['refImages']))}
                 """;
 
@@ -222,11 +224,14 @@ public class SpelDemo {
                 .setUrlTemplate("#{#env['baseUrl']}#{#env['endpoint']}")
                 .setEnvJson(envJson.toString())
                 .setAliasMappingJson(aliasMappingJson)
-                .setAliasPatchJson(aliasPatchJson)
+                .setAddKeyAliasPatchJson(aliasPatchJson)
                 .setHeaderTemplateJson(headerTemplateJson)
                 .setParamTemplateJson(paramTemplateJson)
-                .setParamPatchTemplateJson(paramPatchTemplateJson)
-                .setArrayPatchTemplateJson(arrayPatchTemplateJson);
+                .setAddKeyParamPatchJson(paramPatchTemplateJson)
+                .setAddListTemplateJson(arrayPatchTemplateJson)
+                .setAddListTargetKey("content")
+                .setAddMapTemplateJson("{\"c1\":{\"d1\":\"xxx\",\"d2\":[1,2,3]}}")
+                .setAddMapStrategy("AUTO");
     }
 
     public void postDemo(String url, Map<String, Object> header, Map<String, Object> param) throws IOException {

@@ -58,7 +58,7 @@ public class SpelTemplateEngine {
         // 先解析 base param
         Map<String, Object> resolvedParam = evaluateTemplateMap(parseTemplateJson(config.getParamTemplateJson(), null), evaluationContext);
         // param patch
-        String paramPatchTemplate = firstNonEmpty(config.getParamPatchTemplateJson(), config.getParamTemplateJsonPlus());
+        String paramPatchTemplate = firstNonEmpty(config.getAddKeyParamPatchJson());
         if (StringUtils.hasText(paramPatchTemplate)) {
             Map<String, Object> plusParam = evaluateTemplateMap(parseTemplateJson(paramPatchTemplate, null), evaluationContext);
             JSONObject baseObj = JSONObject.parseObject(JSON.toJSONString(resolvedParam));
@@ -121,11 +121,15 @@ public class SpelTemplateEngine {
 
     private Map<String, String> parseAliasMappingJson(SpelTemplateConfig config) {
         String base = config.getAliasMappingJson();
-        String patch = firstNonEmpty(config.getAliasPatchJson(), config.getAliasMappingJsonPlus());
-        String arrayAlias = firstNonEmpty(config.getArrayPatchAliasJson(), config.getAddListAliasMappingJsonPlus());
-        Map<String, String> merged = JsonPlusTemplateCodec.mergeTemplateToMap(base == null ? "" : base, patch == null ? "" : patch);
-        if (StringUtils.hasText(arrayAlias)) {
-            merged = JsonPlusTemplateCodec.mergeTemplateToMap(JsonPlusTemplateCodec.encodeTemplate(merged), arrayAlias);
+        String patch1 = firstNonEmpty(config.getAddKeyAliasPatchJson());
+        String patch2 = firstNonEmpty(config.getAddListAliasPatchJson());
+        String patch3 = config.getAddMapAliasPatchJson();
+        Map<String, String> merged = JsonPlusTemplateCodec.mergeTemplateToMap(base == null ? "" : base, patch1 == null ? "" : patch1);
+        if (StringUtils.hasText(patch2)) {
+            merged = JsonPlusTemplateCodec.mergeTemplateToMap(JsonPlusTemplateCodec.encodeTemplate(merged), patch2);
+        }
+        if (StringUtils.hasText(patch3)) {
+            merged = JsonPlusTemplateCodec.mergeTemplateToMap(JsonPlusTemplateCodec.encodeTemplate(merged), patch3);
         }
         return merged;
     }
@@ -193,7 +197,7 @@ public class SpelTemplateEngine {
     }
 
     private void applyArrayPatch(SpelTemplateConfig config, StandardEvaluationContext evaluationContext, Map<String, Object> resolvedParam) {
-        String arrayTemplate = firstNonEmpty(config.getArrayPatchTemplateJson(), config.getAddListPlusTemplateJson());
+        String arrayTemplate = firstNonEmpty(config.getAddListTemplateJson());
         if (!StringUtils.hasText(arrayTemplate)) {
             return;
         }
@@ -202,8 +206,8 @@ public class SpelTemplateEngine {
         if (additionArray == null || additionArray.isEmpty()) {
             return;
         }
-        String targetKey = firstNonEmpty(config.getArrayPatchTargetKey(), config.getAddListTargetKey(), "content");
-        JsonPlusMerger.MergeStrategy strategy = resolveMergeStrategy(firstNonEmpty(config.getArrayPatchStrategy(), config.getAddListMergeStrategy(), "APPEND"), JsonPlusMerger.MergeStrategy.APPEND);
+        String targetKey = firstNonEmpty(config.getAddListTargetKey(), "content");
+        JsonPlusMerger.MergeStrategy strategy = resolveMergeStrategy(firstNonEmpty(config.getAddListStrategy(), "APPEND"), JsonPlusMerger.MergeStrategy.APPEND);
 
         JSONObject baseObj = JSONObject.parseObject(JSON.toJSONString(resolvedParam));
         JSONArray targetArray = baseObj.getJSONArray(targetKey);
@@ -222,7 +226,7 @@ public class SpelTemplateEngine {
     }
 
     private void applyMapPatch(SpelTemplateConfig config, StandardEvaluationContext evaluationContext, Map<String, Object> resolvedParam) {
-        String mapTemplate = config.getMapPatchTemplateJson();
+        String mapTemplate = firstNonEmpty(config.getAddMapTemplateJson());
         if (!StringUtils.hasText(mapTemplate)) {
             return;
         }
@@ -231,8 +235,8 @@ public class SpelTemplateEngine {
         if (additionObj == null || additionObj.isEmpty()) {
             return;
         }
-        String targetKey = config.getMapPatchTargetKey();
-        JsonPlusMerger.MergeStrategy strategy = resolveMergeStrategy(config.getMapPatchStrategy(), JsonPlusMerger.MergeStrategy.AUTO);
+        String targetKey = firstNonEmpty(config.getAddMapTargetKey());
+        JsonPlusMerger.MergeStrategy strategy = resolveMergeStrategy(firstNonEmpty(config.getAddMapStrategy(), "AUTO"), JsonPlusMerger.MergeStrategy.AUTO);
 
         JSONObject baseObj = JSONObject.parseObject(JSON.toJSONString(resolvedParam));
         if (!StringUtils.hasText(targetKey)) {

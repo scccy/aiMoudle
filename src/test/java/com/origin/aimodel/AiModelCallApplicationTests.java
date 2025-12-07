@@ -32,17 +32,7 @@ class AiModelCallApplicationTests {
         AiTaskQuery query = new AiTaskQuery();
         query.setModelName("video2");
         Map<String, Object> requestPayload = new HashMap<>();
-//        // 旧版增强2模拟：文本 + 分辨率参数 + 首/尾帧
-//        requestPayload.put("a1", "小猫在后空翻");
-//        requestPayload.put("a4", 8);
-//        requestPayload.put("a5", 32);
-//        requestPayload.put("a6", 16);
-//        requestPayload.put("a10", 1);
-//        requestPayload.put("a12", "https://b0.bdstatic.com/ugc/zvzOJuVeTtOKY7th7APUKQ4a77fedc16936b3ed5cdf694bd28674e.jpg");
-//        requestPayload.put("a13", "https://ark-project.tos-cn-beijing.volces.com/doc_image/seepro_last_frame.jpeg");
-//        HashMap<String, Object> moreRole = new HashMap<>();
-//        moreRole.put("type","https://demo.com/1.jdpg");
-        // 增强3模拟：lite 模型 + 参考图列表（不固定数量）
+        // addkey：切换模型；addlist：参考图列表；addmap：常量对象 c1
         requestPayload.put("a1", "[图1]戴着眼镜穿着蓝色T恤的男生和[图2]的柯基小狗，坐在[图3]的草坪上，3D卡通风格");
         List<Map<String, Object>> refImages = new ArrayList<>();
         refImages.add(new HashMap<String, Object>() {{
@@ -68,6 +58,7 @@ class AiModelCallApplicationTests {
         }});
         requestPayload.put("a12", refImages);
         requestPayload.put("a15", "doubao-seedance-1-0-lite-i2v-250428");
+        // addmap 不依赖 payload，本例使用常量 c1:{d1:xxx,d2:[1,2,3]}
         query.setParams(requestPayload);
         spelDemo.taskStart(query);
     }
