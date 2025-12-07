@@ -44,6 +44,11 @@ public class SpelTemplateConfig {
     private String aliasMappingJsonPlus;
 
     /**
+     * 新命名：追加别名映射的增量 JSON（可选）
+     */
+    private String aliasPatchJson;
+
+    /**
      * Header 动态模板 JSON
      */
     private String headerTemplateJson;
@@ -57,6 +62,54 @@ public class SpelTemplateConfig {
      * Param 动态模板增量 JSON（可选）
      */
     private String paramTemplateJsonPlus;
+
+    /**
+     * 新命名：Param 动态模板增量 JSON（可选）
+     */
+    private String paramPatchTemplateJson;
+
+    /**
+     * 数组追加场景：别名补丁 JSON（兼容 addListAliasMappingJsonPlus）
+     */
+    private String arrayPatchAliasJson;
+
+    /**
+     * 数组追加场景：模板 JSON（SpEL 输出 JSONArray / 单对象）
+     */
+    private String arrayPatchTemplateJson;
+
+    /**
+     * 数组追加场景：目标 key，默认 content
+     */
+    private String arrayPatchTargetKey = "content";
+
+    /**
+     * 数组追加场景：合并策略，默认 APPEND，可选 OVERWRITE
+     */
+    private String arrayPatchStrategy = "APPEND";
+
+    /**
+     * Map 追加/覆盖：模板 JSON（SpEL 输出 JSONObject）
+     */
+    private String mapPatchTemplateJson;
+
+    /**
+     * Map 追加/覆盖：目标 key，默认顶层
+     */
+    private String mapPatchTargetKey;
+
+    /**
+     * Map 追加/覆盖：合并策略，默认 AUTO，可选 OVERWRITE
+     */
+    private String mapPatchStrategy = "AUTO";
+
+    /**
+     * 兼容旧命名：数组追加字段
+     */
+    private String addListAliasMappingJsonPlus;
+    private String addListPlusTemplateJson;
+    private String addListTargetKey;
+    private String addListMergeStrategy;
 
     /**
      * SpEL 变量定义 JSON 数组，默认注册 env/payload/task
@@ -132,7 +185,7 @@ public class SpelTemplateConfig {
         if (alias == null || realKey == null) {
             return this;
         }
-        String baseJson = aliasMappingJsonPlus;
+        String baseJson = aliasPatchJson != null ? aliasPatchJson : aliasMappingJsonPlus;
         if (baseJson == null || baseJson.trim().isEmpty()) {
             baseJson = "{}";
         }
@@ -140,6 +193,7 @@ public class SpelTemplateConfig {
                 com.origin.aimodel.util.jsonplus.JsonPlusTemplateCodec.mergeTemplateToMap(baseJson,
                         String.format("{\"%s\":\"%s\"}", alias, realKey)));
         this.aliasMappingJsonPlus = merged;
+        this.aliasPatchJson = merged;
         return this;
     }
 
@@ -150,7 +204,7 @@ public class SpelTemplateConfig {
         if (key == null || spelExpr == null) {
             return this;
         }
-        String baseJson = paramTemplateJsonPlus;
+        String baseJson = paramPatchTemplateJson != null ? paramPatchTemplateJson : paramTemplateJsonPlus;
         if (baseJson == null || baseJson.trim().isEmpty()) {
             baseJson = "{}";
         }
@@ -158,6 +212,7 @@ public class SpelTemplateConfig {
                 com.origin.aimodel.util.jsonplus.JsonPlusTemplateCodec.mergeTemplateToMap(baseJson,
                         String.format("{\"%s\":\"%s\"}", key, spelExpr)));
         this.paramTemplateJsonPlus = merged;
+        this.paramPatchTemplateJson = merged;
         return this;
     }
 }

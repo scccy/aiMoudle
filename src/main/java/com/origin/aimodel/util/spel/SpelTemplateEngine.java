@@ -1,8 +1,10 @@
 package com.origin.aimodel.util.spel;
 
 import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.origin.aimodel.util.jsonplus.JsonPlusTemplateCodec;
+import com.origin.aimodel.util.jsonplus.JsonPlusMerger;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +37,7 @@ public class SpelTemplateEngine {
 
         Map<String, Object> envContext = parseJsonToObjectMap(config.getEnvJson());
         Map<String, Object> frontPayload = parseJsonToObjectMap(config.getFrontPayloadJson());
-        Map<String, String> aliasMapping = parseAliasMappingJson(config.getAliasMappingJson(), config.getAliasMappingJsonPlus());
+        Map<String, String> aliasMapping = parseAliasMappingJson(config);
         Map<String, Object> payloadContext = remapPayload(frontPayload, aliasMapping);
 
         Map<String, Object> builtinContext = new LinkedHashMap<>(Optional.ofNullable(config.getBuiltinContext()).orElseGet(LinkedHashMap::new));
@@ -54,14 +57,22 @@ public class SpelTemplateEngine {
 
         // 先解析 base param
         Map<String, Object> resolvedParam = evaluateTemplateMap(parseTemplateJson(config.getParamTemplateJson(), null), evaluationContext);
-        // 若存在 plus，则解析 plus 模板并与 base 结果合并（数组追加、标量覆盖）
-        if (StringUtils.hasText(config.getParamTemplateJsonPlus())) {
-            Map<String, Object> plusParam = evaluateTemplateMap(parseTemplateJson(config.getParamTemplateJsonPlus(), null), evaluationContext);
-            com.alibaba.fastjson2.JSONObject baseObj = com.alibaba.fastjson2.JSONObject.parseObject(com.alibaba.fastjson2.JSON.toJSONString(resolvedParam));
-            com.alibaba.fastjson2.JSONObject plusObj = com.alibaba.fastjson2.JSONObject.parseObject(com.alibaba.fastjson2.JSON.toJSONString(plusParam));
-            com.origin.aimodel.util.jsonplus.JsonPlusMerger.merge(baseObj, plusObj, com.origin.aimodel.util.jsonplus.JsonPlusMerger.MergeStrategy.AUTO);
+        // param patch
+        String paramPatchTemplate = firstNonEmpty(config.getParamPatchTemplateJson(), config.getParamTemplateJsonPlus());
+        if (StringUtils.hasText(paramPatchTemplate)) {
+            Map<String, Object> plusParam = evaluateTemplateMap(parseTemplateJson(paramPatchTemplate, null), evaluationContext);
+            JSONObject baseObj = JSONObject.parseObject(JSON.toJSONString(resolvedParam));
+            JSONObject plusObj = JSONObject.parseObject(JSON.toJSONString(plusParam));
+            JsonPlusMerger.merge(baseObj, plusObj, JsonPlusMerger.MergeStrategy.AUTO);
             resolvedParam = new LinkedHashMap<>(baseObj);
         }
+
+        // map patch
+        applyMapPatch(config, evaluationContext, resolvedParam);
+
+        // array patch
+        applyArrayPatch(config, evaluationContext, resolvedParam);
+
         String resolvedUrl = null;
         if (StringUtils.hasText(config.getUrlTemplate())) {
             resolvedUrl = parser.parseExpression(config.getUrlTemplate(), parserContext).getValue(evaluationContext, String.class);
@@ -108,10 +119,15 @@ public class SpelTemplateEngine {
         return remapped;
     }
 
-    private Map<String, String> parseAliasMappingJson(String aliasMappingJson, String aliasMappingJsonPlus) {
-        return JsonPlusTemplateCodec.mergeTemplateToMap(
-                aliasMappingJson == null ? "" : aliasMappingJson,
-                aliasMappingJsonPlus == null ? "" : aliasMappingJsonPlus);
+    private Map<String, String> parseAliasMappingJson(SpelTemplateConfig config) {
+        String base = config.getAliasMappingJson();
+        String patch = firstNonEmpty(config.getAliasPatchJson(), config.getAliasMappingJsonPlus());
+        String arrayAlias = firstNonEmpty(config.getArrayPatchAliasJson(), config.getAddListAliasMappingJsonPlus());
+        Map<String, String> merged = JsonPlusTemplateCodec.mergeTemplateToMap(base == null ? "" : base, patch == null ? "" : patch);
+        if (StringUtils.hasText(arrayAlias)) {
+            merged = JsonPlusTemplateCodec.mergeTemplateToMap(JsonPlusTemplateCodec.encodeTemplate(merged), arrayAlias);
+        }
+        return merged;
     }
 
     private List<ContextVariableDefinition> parseContextVariableDefinitions(String contextVariableJson) {
@@ -174,6 +190,156 @@ public class SpelTemplateEngine {
             resolved.put(key, evalValue);
         });
         return resolved;
+    }
+
+    private void applyArrayPatch(SpelTemplateConfig config, StandardEvaluationContext evaluationContext, Map<String, Object> resolvedParam) {
+        String arrayTemplate = firstNonEmpty(config.getArrayPatchTemplateJson(), config.getAddListPlusTemplateJson());
+        if (!StringUtils.hasText(arrayTemplate)) {
+            return;
+        }
+        Object addition = evaluateRawExpression(arrayTemplate, evaluationContext);
+        JSONArray additionArray = normalizeToArray(addition);
+        if (additionArray == null || additionArray.isEmpty()) {
+            return;
+        }
+        String targetKey = firstNonEmpty(config.getArrayPatchTargetKey(), config.getAddListTargetKey(), "content");
+        JsonPlusMerger.MergeStrategy strategy = resolveMergeStrategy(firstNonEmpty(config.getArrayPatchStrategy(), config.getAddListMergeStrategy(), "APPEND"), JsonPlusMerger.MergeStrategy.APPEND);
+
+        JSONObject baseObj = JSONObject.parseObject(JSON.toJSONString(resolvedParam));
+        JSONArray targetArray = baseObj.getJSONArray(targetKey);
+        if (targetArray == null || strategy == JsonPlusMerger.MergeStrategy.OVERWRITE) {
+            targetArray = new JSONArray();
+            baseObj.put(targetKey, targetArray);
+        }
+        if (strategy == JsonPlusMerger.MergeStrategy.OVERWRITE) {
+            targetArray.clear();
+        }
+        for (Object item : additionArray) {
+            targetArray.add(deepCopy(item));
+        }
+        resolvedParam.clear();
+        resolvedParam.putAll(baseObj);
+    }
+
+    private void applyMapPatch(SpelTemplateConfig config, StandardEvaluationContext evaluationContext, Map<String, Object> resolvedParam) {
+        String mapTemplate = config.getMapPatchTemplateJson();
+        if (!StringUtils.hasText(mapTemplate)) {
+            return;
+        }
+        Object addition = evaluateRawExpression(mapTemplate, evaluationContext);
+        JSONObject additionObj = normalizeToObject(addition);
+        if (additionObj == null || additionObj.isEmpty()) {
+            return;
+        }
+        String targetKey = config.getMapPatchTargetKey();
+        JsonPlusMerger.MergeStrategy strategy = resolveMergeStrategy(config.getMapPatchStrategy(), JsonPlusMerger.MergeStrategy.AUTO);
+
+        JSONObject baseObj = JSONObject.parseObject(JSON.toJSONString(resolvedParam));
+        if (!StringUtils.hasText(targetKey)) {
+            JsonPlusMerger.merge(baseObj, additionObj, strategy);
+        } else {
+            JSONObject target = baseObj.getJSONObject(targetKey);
+            if (target == null || strategy == JsonPlusMerger.MergeStrategy.OVERWRITE) {
+                baseObj.put(targetKey, deepCopy(additionObj));
+            } else {
+                JsonPlusMerger.merge(target, additionObj, strategy);
+            }
+        }
+        resolvedParam.clear();
+        resolvedParam.putAll(baseObj);
+    }
+
+    private JSONArray normalizeToArray(Object addition) {
+        if (addition == null) {
+            return null;
+        }
+        if (addition instanceof JSONArray) {
+            return JSONArray.parseArray(((JSONArray) addition).toJSONString());
+        }
+        if (addition instanceof Collection<?>) {
+            JSONArray array = new JSONArray();
+            ((Collection<?>) addition).forEach(item -> array.add(deepCopy(item)));
+            return array;
+        }
+        if (addition instanceof Object[]) {
+            JSONArray array = new JSONArray();
+            for (Object item : (Object[]) addition) {
+                array.add(deepCopy(item));
+            }
+            return array;
+        }
+        if (addition instanceof String && StringUtils.hasText((String) addition)) {
+            String value = (String) addition;
+            try {
+                return JSONArray.parseArray(value);
+            } catch (Exception ignored) {
+                // ignore and wrap below
+            }
+        }
+        JSONArray array = new JSONArray();
+        array.add(deepCopy(addition));
+        return array;
+    }
+
+    private JSONObject normalizeToObject(Object addition) {
+        if (addition == null) {
+            return null;
+        }
+        if (addition instanceof JSONObject) {
+            return JSONObject.parseObject(((JSONObject) addition).toJSONString());
+        }
+        if (addition instanceof Map<?, ?> || addition instanceof String) {
+            try {
+                return JSONObject.parseObject(JSON.toJSONString(addition));
+            } catch (Exception ignored) {
+                // fall through
+            }
+        }
+        return null;
+    }
+
+    private Object deepCopy(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return JSON.parse(JSON.toJSONString(value));
+    }
+
+    /**
+     * 评估可能是模板表达式（#{...}）的 SpEL，并返回原始对象，避免强制转换为字符串
+     */
+    private Object evaluateRawExpression(String expression, StandardEvaluationContext evaluationContext) {
+        if (!StringUtils.hasText(expression)) {
+            return null;
+        }
+        String exprToEval = expression.trim();
+        if (exprToEval.startsWith("#{") && exprToEval.endsWith("}")) {
+            exprToEval = exprToEval.substring(2, exprToEval.length() - 1).trim();
+        }
+        return parser.parseExpression(exprToEval).getValue(evaluationContext);
+    }
+
+    private JsonPlusMerger.MergeStrategy resolveMergeStrategy(String strategyName, JsonPlusMerger.MergeStrategy defaultStrategy) {
+        if (!StringUtils.hasText(strategyName)) {
+            return defaultStrategy;
+        }
+        try {
+            return JsonPlusMerger.MergeStrategy.valueOf(strategyName.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return defaultStrategy;
+        }
+    }
+
+    private String firstNonEmpty(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return null;
     }
 
     /**

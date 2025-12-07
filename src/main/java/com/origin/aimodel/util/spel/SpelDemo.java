@@ -169,6 +169,7 @@ public class SpelDemo {
                 """;
         String paramTemplateJsonPlus = null;
         String aliasMappingJsonPlus = null;
+        String aliasPatchJson = null;
 
 //         增强1：单图追加（保留原逻辑，注释停用）
 //        paramTemplateJsonPlus = """
@@ -200,21 +201,20 @@ public class SpelDemo {
 //                    "a13": "imageUrlLast"
 //                }
 //                """;
-
-//         增强3：lite 模型 + 多参考图 role=reference_image
-        paramTemplateJsonPlus = """
+//      增强3
+        aliasPatchJson = """
                 {
-                  "model": "#{#payload['model_plus'] ?: #env['model_plus'] ?: 'doubao-seedance-1-0-lite-i2v-250428'}",
-                  "content": "#{T(com.alibaba.fastjson2.JSON).parseArray('[{\\"type\\":\\"image_url\\",\\"image_url\\":{\\"url\\":\\"' + #payload['refImage1'] + '\\"},\\"role\\":\\"reference_image\\"},{\\"type\\":\\"image_url\\",\\"image_url\\":{\\"url\\":\\"' + #payload['refImage2'] + '\\"},\\"role\\":\\"reference_image\\"},{\\"type\\":\\"image_url\\",\\"image_url\\":{\\"url\\":\\"' + #payload['refImage3'] + '\\"},\\"role\\":\\"reference_image\\"}]')}"
-                }
-                """;
-        aliasMappingJsonPlus = """
-                {
-                  "a12": "refImage1",
-                  "a13": "refImage2",
-                  "a14": "refImage3",
+                  "a12": "refImages",
                   "a15": "model_plus"
                 }
+                """;
+        String paramPatchTemplateJson = """
+                {
+                  "model": "#{#payload['model_plus'] ?: #env['model_plus'] ?: 'doubao-seedance-1-0-lite-i2v-250428'}"
+                }
+                """;
+        String arrayPatchTemplateJson = """
+                #{T(com.alibaba.fastjson2.JSON).parseArray(T(com.alibaba.fastjson2.JSON).toJSONString(#payload['refImages']))}
                 """;
 
         return new SpelTemplateConfig()
@@ -222,10 +222,11 @@ public class SpelDemo {
                 .setUrlTemplate("#{#env['baseUrl']}#{#env['endpoint']}")
                 .setEnvJson(envJson.toString())
                 .setAliasMappingJson(aliasMappingJson)
-                .setAliasMappingJsonPlus(aliasMappingJsonPlus)
+                .setAliasPatchJson(aliasPatchJson)
                 .setHeaderTemplateJson(headerTemplateJson)
                 .setParamTemplateJson(paramTemplateJson)
-                .setParamTemplateJsonPlus(paramTemplateJsonPlus);
+                .setParamPatchTemplateJson(paramPatchTemplateJson)
+                .setArrayPatchTemplateJson(arrayPatchTemplateJson);
     }
 
     public void postDemo(String url, Map<String, Object> header, Map<String, Object> param) throws IOException {
