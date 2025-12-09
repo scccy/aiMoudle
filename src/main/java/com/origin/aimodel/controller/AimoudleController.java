@@ -1,12 +1,11 @@
 package com.origin.aimodel.controller;
 
+//import com.origin.aimodel.base.ResultData;
+//import com.origin.aimodel.base.ResultData;
 import com.origin.aimodel.base.ResultData;
 import com.origin.aimodel.dao.service.AiModelMpService;
 import com.origin.aimodel.domain.mp.AiModelMp;
-import com.origin.aimodel.domain.vo.AiTaskQuery;
-import com.origin.aimodel.domain.vo.AiTaskResult;
 
-import com.origin.aimodel.util.spel.SpelDemo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,8 +19,8 @@ public class AimoudleController {
     @Autowired
     AiModelMpService aiModelMpServiceImpl;
 
-    @Autowired
-    SpelDemo spelDemo;
+//    @Autowired
+//    SpelDemoNew spelDemoNew;
 
     @PostMapping("/add")
     public ResultData<?> add(@RequestBody AiModelMp aiModelMp){
