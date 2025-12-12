@@ -73,12 +73,11 @@ public class SpelConfigParser {
     }
     
     private static String extractQuotedValue(String line) {
-        int first = line.indexOf('"');
-        int second = line.indexOf('"', first + 1);
-        int third = line.indexOf('"', second + 1);
-        int fourth = line.indexOf('"', third + 1);
-        if (third >= 0 && fourth > third) {
-            return line.substring(third + 1, fourth);
+        int colon = line.indexOf(':');
+        int start = colon >= 0 ? line.indexOf('"', colon) : line.indexOf('"');
+        int end = line.lastIndexOf('"');
+        if (start >= 0 && end > start) {
+            return line.substring(start + 1, end);
         }
         return "";
     }

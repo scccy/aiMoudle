@@ -6,31 +6,32 @@ import com.origin.aimodel.util.spel.SpelDslConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * SpEL 配置示例，仅包含配置项字符串，不做任何解析逻辑。
- * 具体解析/预览逻辑委托给 {@link SpelDsl}。
+ * 样式三示例（新引擎版本）：图生视频请求的头/体/URL预览。
  */
 @Slf4j
 @Service
-public final class SpelDemo {
-
+public class SpelDemoThreeNew {
 
     /**
-     * 模拟从数据库读取的模型基础数据。
+     * 模拟从数据库读取的基础信息（含模型、鉴权与 URL 信息）。
      */
     public static final String BASE_INFO = """
             {
-              "model": "chat1",
+              "model": "doubao-seedance-1-0-lite-i2v-250428",
               "Authorization": "Bearer ahudhasw2xx",
-              "base_url":"https://www.baidu.com",
-              "point":"/point1/video"
+              "base_url": "https://ark.cn-beijing.volces.com",
+              "point": "/api/v3/contents/generations/tasks"
             }
             """;
 
     /**
-     * 示例一：将 Doubao Seedance 文生视频的 curl 请求拆解为 headerItem（头部配置）部分（无解析逻辑）。
+     * 请求头配置。
      */
-    public static final String TEXT_GENERATION_HEADER_ITEM = """
+    public static final String HEADER_ITEM = """
             { "headerItem":
               {
                 "key": "contentTypeHeader",
@@ -52,34 +53,18 @@ public final class SpelDemo {
             """;
 
     /**
-     * 示例一：对应的 paramItem（请求体配置）部分（无解析逻辑）。
+     * 图生视频 body 配置（使用新的list处理方式）。
      */
-    public static final String TEXT_GENERATION_PARAM_ITEM = """
+    public static final String IMAGE_TO_VIDEO_PARAM_ITEM = """
             { "paramItem":
               {
                 "key": "model",
                 "category": "key",
                 "node": "model",
-                "post_param": "model_name",
+                "post_param": "model",
                 "value_object": "string"
               },
-              {
-                "key": "contentType",
-                "category": "key",
-                "node": "content[0]",
-                "post_param": "type",
-                "default_value": "text",
-                "value_object": "string"
-              },
-              {
-                "key": "prompt",
-                "category": "key",
-                "node": "content[0].text",
-                "post_param": "text",
-                "spel_temp": "{value}",
-                "value_object": "string"
-              },
-              {
+               {
                 "key": "ratio",
                 "category": "key",
                 "node": "content[0].text",
@@ -94,12 +79,34 @@ public final class SpelDemo {
                 "post_param": "text",
                 "spel_temp": " --resolution {value}",
                 "value_object": "string"
+              },
+              {
+                "key": "content_type",
+                "category": "key",
+                "node": "content[0].type",
+                "post_param": "type",
+                "default_value": "text",
+                "value_object": "string"
+              },
+              {
+                "key": "prompt",
+                "category": "key",
+                "node": "content[0].text",
+                "post_param": "text",
+                "value_object": "string"
+              },
+              {
+                "key": "image_list",
+                "category": "list",
+                "node": "content",
+                "spel_temp": "{"paramItem":[{"key":"type","node":"type","post_param":"type","default_value":"image_url","value_object":"string"},{"key":"url","node":"image_url.url","post_param":"url","value_object":"string"},{"key":"role","node":"role","post_param":"role","default_value":"reference_image","value_object":"string"}]}",
+                "value_object": "list<json>"
               }
             }
             """;
 
     private static final SpelDslConfig CONFIG =
-            new SpelDslConfig(BASE_INFO, TEXT_GENERATION_HEADER_ITEM, TEXT_GENERATION_PARAM_ITEM);
+            new SpelDslConfig(BASE_INFO, HEADER_ITEM, IMAGE_TO_VIDEO_PARAM_ITEM);
 
     public void taskStart(AiTaskQuery aiTaskQuery) {
         java.util.LinkedHashMap<String, Object> payload = new java.util.LinkedHashMap<>();
@@ -111,15 +118,8 @@ public final class SpelDemo {
         }
 
         SpelDsl.Runner runner = SpelDsl.Runner(CONFIG, payload);
-
-        String headerPreview = runner.headerPreview();
-        String paramPreview = runner.paramPreview();
-        String urlPreview = runner.urlPreview();
-
-        log.info("header preview:\n{}", headerPreview);
-        log.info("param preview:\n{}", paramPreview);
-        log.info("url preview: {}", urlPreview);
+        log.info("NEW ENGINE - header preview:\n{}", runner.headerPreviewNew());
+        log.info("NEW ENGINE - param preview:\n{}", runner.paramPreviewNew());
+        log.info("NEW ENGINE - url preview: {}", runner.urlPreviewNew());
     }
-
-
 }

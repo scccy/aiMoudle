@@ -8,7 +8,7 @@ import java.util.Map;
  * 轻量级的 SpEL 配置解析/预览工具，用于从 headerItem/paramItem 配置生成示例结构。
  * 无实际 SpEL 解析，仅按 {value} 模板拼接。
  * 
- * 重构为门面模式，协调 SpelConfigParser、SpelPayloadEngine 和 SpelValidator 组件。
+ * 重构为门面模式，协调 SpelConfigParser、SpelPayloadEngineNew 和 SpelValidator 组件。
  */
 public final class SpelDsl {
 
@@ -30,14 +30,24 @@ public final class SpelDsl {
         return SpelPayloadEngine.buildResult(entries, payload);
     }
 
+    /** 使用配置对象 + 外部 payload 生成 param 预览，自动合并 baseInfo。 */
+    public static String getParamPreview(SpelDslConfig config, Map<String, Object> payload) {
+        return SpelPayloadEngine.getParamPreview(config, payload);
+    }
+
+    /** 使用新的引擎生成 param 预览 */
+    public static String getParamPreviewNew(SpelDslConfig config, Map<String, Object> payload) {
+        return SpelPayloadEngine.getParamPreview(config, payload);
+    }
+
     /** 使用配置对象 + 外部 payload 生成 header 预览，自动合并 baseInfo。 */
     public static String getHeaderPreview(SpelDslConfig config, Map<String, Object> payload) {
         return SpelPayloadEngine.getHeaderPreview(config, payload);
     }
 
-    /** 使用配置对象 + 外部 payload 生成 param 预览，自动合并 baseInfo。 */
-    public static String getParamPreview(SpelDslConfig config, Map<String, Object> payload) {
-        return SpelPayloadEngine.getParamPreview(config, payload);
+    /** 使用新的引擎生成 header 预览 */
+    public static String getHeaderPreviewNew(SpelDslConfig config, Map<String, Object> payload) {
+        return SpelPayloadEngine.getHeaderPreview(config, payload);
     }
 
     /** 校验 payload 与配置的匹配度（长度/数值范围/枚举）。 */
@@ -47,6 +57,11 @@ public final class SpelDsl {
 
     /** 使用配置对象 + 外部 payload 生成 URL 预览（base_url + point）。 */
     public static String getUrlPreview(SpelDslConfig config, Map<String, Object> payload) {
+        return SpelPayloadEngine.getUrlPreview(config, payload);
+    }
+
+    /** 使用新的引擎生成 URL 预览 */
+    public static String getUrlPreviewNew(SpelDslConfig config, Map<String, Object> payload) {
         return SpelPayloadEngine.getUrlPreview(config, payload);
     }
 
@@ -98,6 +113,19 @@ public final class SpelDsl {
 
         public SpelValidator.ValidationResult validate() {
             return SpelDsl.validateParam(config, payload);
+        }
+        
+        // 新的预览方法
+        public String headerPreviewNew() {
+            return SpelDsl.getHeaderPreviewNew(config, payload);
+        }
+        
+        public String paramPreviewNew() {
+            return SpelDsl.getParamPreviewNew(config, payload);
+        }
+        
+        public String urlPreviewNew() {
+            return SpelDsl.getUrlPreviewNew(config, payload);
         }
     }
 }

@@ -25,8 +25,8 @@ public class SpelValidator {
     
     /** 校验 payload 与配置的匹配度（长度/数值范围/枚举）。 */
     public static ValidationResult validateParam(SpelDslConfig config, Map<String, Object> payload) {
-        var entries = SpelConfigParser.parseConfig(config.paramItem());
-        var merged = new LinkedHashMap<>(SpelConfigParser.parseBaseInfo(config.baseInfo()));
+        List<SpelConfigParser.ParamConfigEntry> entries = SpelConfigParser.parseConfig(config.paramItem());
+        Map<String, Object> merged = new LinkedHashMap<>(SpelConfigParser.parseBaseInfo(config.baseInfo()));
         if (payload != null) {
             merged.putAll(payload);
         }
