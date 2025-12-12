@@ -1,6 +1,8 @@
-package com.origin.aimodel.util.spel;
+package com.origin.aimodel.util.spel.demo;
 
 import com.origin.aimodel.domain.vo.AiTaskQuery;
+import com.origin.aimodel.util.spel.SpelDsl;
+import com.origin.aimodel.util.spel.SpelDslConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
