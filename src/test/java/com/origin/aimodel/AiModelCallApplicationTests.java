@@ -1,6 +1,9 @@
 package com.origin.aimodel;
 
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.origin.aimodel.domain.vo.AiTaskQuery;
+import com.origin.aimodel.util.spel.SpelDsl;
 import com.origin.aimodel.util.spel.demo.SpelDemo;
 import com.origin.aimodel.util.spel.demo.SpelDemoNew;
 import com.origin.aimodel.util.spel.demo.SpelDemoThreeNew;
@@ -133,6 +136,87 @@ class AiModelCallApplicationTests {
         
         query.setParams(payload);
         spelDemoThreeNew.taskStart(query);
+    }
+
+    @Test
+    void c() {
+        // 模拟实际请求的 JSON body
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("model", "doubao-seedance-1-0-pro-250528");
+        
+        // 构建 content 数组
+        List<JSONObject> contentList = new ArrayList<>();
+        JSONObject contentItem = new JSONObject();
+        contentItem.put("type", "text");
+        contentItem.put("text", "多个镜头。一名侦探进入一间光线昏暗的房间。他检查桌上的线索，手里拿起桌上的某个物品。镜头转向他正在思索。 --ratio 16:9");
+        contentList.add(contentItem);
+        requestBody.put("content", contentList);
+
+        // 模拟实际请求的 header
+        Map<String, String> requestHeaders = new HashMap<>();
+        requestHeaders.put("Content-Type", "application/json");
+        requestHeaders.put("Authorization", "Bearer $ARK_API_KEY");
+
+        // paramItem 映射关系配置：定义业务字段名到实际请求字段的映射
+        JSONObject mappingModel = new JSONObject();
+        mappingModel.put("key", "model");
+        mappingModel.put("post_param", "model");  // 实际请求中的字段路径
+        
+        JSONObject mappingType = new JSONObject();
+        mappingType.put("key", "content_type");
+        mappingType.put("post_param", "content[0].type");  // 实际请求中的字段路径
+        
+        JSONObject mappingRatio = new JSONObject();
+        mappingRatio.put("key", "ratio");
+        mappingRatio.put("post_param", "content[0].text");  // 实际请求中的字段路径（需要从文本中提取）
+        
+        JSONObject mappingPrompt = new JSONObject();
+        mappingPrompt.put("key", "prompt");
+        mappingPrompt.put("post_param", "content[0].text");  // 实际请求中的字段路径
+
+        JSONArray paramMappingArray = new JSONArray();
+        paramMappingArray.add(mappingModel);
+        paramMappingArray.add(mappingType);
+        paramMappingArray.add(mappingRatio);
+        paramMappingArray.add(mappingPrompt);
+        JSONObject paramMappingConfig = new JSONObject();
+        paramMappingConfig.put("paramItem", paramMappingArray);
+
+        // headerItem 映射关系配置
+        JSONObject mappingContentType = new JSONObject();
+        mappingContentType.put("key", "contentTypeHeader");
+        mappingContentType.put("post_param", "Content-Type");
+        
+        JSONObject mappingAuthorization = new JSONObject();
+        mappingAuthorization.put("key", "authorization");
+        mappingAuthorization.put("post_param", "Authorization");
+
+        JSONArray headerMappingArray = new JSONArray();
+        headerMappingArray.add(mappingContentType);
+        headerMappingArray.add(mappingAuthorization);
+        JSONObject headerMappingConfig = new JSONObject();
+        headerMappingConfig.put("headerItem", headerMappingArray);
+
+        // 反向解析：从实际请求 body + 映射关系生成 paramItem 配置（使用门面模式）
+        JSONObject generatedParamItem = SpelDsl.getParamItemObject(requestBody, paramMappingConfig);
+        
+        // 反向解析：从实际请求 header + 映射关系生成 headerItem 配置（使用门面模式）
+        JSONObject generatedHeaderItem = SpelDsl.getHeaderItemObject(requestHeaders, headerMappingConfig);
+        
+        // 打印结果
+        System.out.println("========== 实际请求 body ==========");
+        System.out.println(requestBody.toJSONString());
+        System.out.println("\n========== 实际请求 header ==========");
+        System.out.println("Content-Type: " + requestHeaders.get("Content-Type"));
+        System.out.println("Authorization: " + requestHeaders.get("Authorization"));
+        System.out.println("\n========== paramItem 映射关系配置 ==========");
+        System.out.println(paramMappingConfig.toJSONString());
+        System.out.println("\n========== headerItem 映射关系配置 ==========");
+        System.out.println(headerMappingConfig.toJSONString());
+        System.out.println("\n========== 反向解析生成的 paramItem 配置 ==========");
+        System.out.println(generatedParamItem.toJSONString());
+        System.out.println("\n========== 反向解析生成的 headerItem 配置 ==========");
+        System.out.println(generatedHeaderItem.toJSONString());
     }
 
 

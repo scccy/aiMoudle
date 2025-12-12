@@ -1,5 +1,7 @@
 package com.origin.aimodel.util.spel;
 
+import com.alibaba.fastjson2.JSONObject;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,7 +10,7 @@ import java.util.Map;
  * 轻量级的 SpEL 配置解析/预览工具，用于从 headerItem/paramItem 配置生成示例结构。
  * 无实际 SpEL 解析，仅按 {value} 模板拼接。
  * 
- * 重构为门面模式，协调 SpelConfigParser、SpelPayloadEngineNew 和 SpelValidator 组件。
+ * 重构为门面模式，协调 SpelConfigParser、SpelPayloadEngineNew、SpelValidator 和 SpelReverseParser 组件。
  */
 public final class SpelDsl {
 
@@ -83,6 +85,26 @@ public final class SpelDsl {
     /** 解析 baseInfo JSON 字符串为 Map，兼容大小写 key。 */
     public static Map<String, Object> parseBaseInfo(String baseInfo) {
         return SpelConfigParser.parseBaseInfo(baseInfo);
+    }
+
+    /** 反向解析：从实际请求 body + 映射关系生成 paramItem 配置 */
+    public static String getParamItem(JSONObject requestBody, JSONObject mappingConfig) {
+        return SpelReverseParser.getParamItem(requestBody, mappingConfig);
+    }
+
+    /** 反向解析：从实际请求 body + 映射关系生成 paramItem 配置对象 */
+    public static JSONObject getParamItemObject(JSONObject requestBody, JSONObject mappingConfig) {
+        return SpelReverseParser.getParamItemObject(requestBody, mappingConfig);
+    }
+
+    /** 反向解析：从实际请求 header + 映射关系生成 headerItem 配置 */
+    public static String getHeaderItem(Map<String, String> requestHeaders, JSONObject mappingConfig) {
+        return SpelReverseParser.getHeaderItem(requestHeaders, mappingConfig);
+    }
+
+    /** 反向解析：从实际请求 header + 映射关系生成 headerItem 配置对象 */
+    public static JSONObject getHeaderItemObject(Map<String, String> requestHeaders, JSONObject mappingConfig) {
+        return SpelReverseParser.getHeaderItemObject(requestHeaders, mappingConfig);
     }
 
     /** 便捷实例化调用类。 */
