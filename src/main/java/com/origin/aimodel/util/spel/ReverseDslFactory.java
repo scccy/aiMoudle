@@ -14,12 +14,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
+ * 反向解析 DSL 工厂：第一层（核心识别层）
  * 根据数据库的模型与配置项构建 PostDslConfig。
  * 同时提供从实际请求数据生成基础映射的功能。
  */
-public  class PostDslConfigFactory {
+public class ReverseDslFactory {
 
-    private PostDslConfigFactory() {
+    private ReverseDslFactory() {
     }
 
     /**
@@ -431,8 +432,15 @@ public  class PostDslConfigFactory {
             }
         }
         
+        // 设置 defaultValue：如果所有值都相同，或者只有一个值
         if (fieldInfo.hasCommonValue()) {
             fieldItem.defaultValue = fieldInfo.getCommonValue();
+        } else if (fieldInfo.getValues().size() == 1) {
+            // 如果只有一个值，也设置为 defaultValue
+            Object singleValue = fieldInfo.getValues().get(0);
+            if (singleValue != null) {
+                fieldItem.defaultValue = singleValue.toString();
+            }
         }
         
         return fieldItem;
@@ -751,7 +759,15 @@ public  class PostDslConfigFactory {
                 } else {
                     // 不包含 Map 元素，按普通列表处理
                     fieldInfo.addValue(value);
-                    fieldInfo.setType(inferValueObjectType(value));
+                    // 对于 List，需要识别元素类型，如 list<string>, list<int> 等
+                    if (!list.isEmpty()) {
+                        Object firstElement = list.get(0);
+                        String elementType = inferValueObjectType(firstElement);
+                        fieldInfo.setType("list<" + elementType + ">");
+                    } else {
+                        // 空列表，默认为 list<string>
+                        fieldInfo.setType("list<string>");
+                    }
                 }
             } else {
                 fieldInfo.addValue(value);
@@ -779,9 +795,19 @@ public  class PostDslConfigFactory {
                         e.getValue(),
                         (oldVal, newVal) -> {
                             oldVal.getValues().addAll(newVal.getValues());
-                            if (!"string".equals(newVal.getType())) {
-                                oldVal.setType(newVal.getType());
+                            
+                            // 合并类型：如果类型不同，统一为 "string"（类型不一致时使用通用类型）
+                            // 如果类型相同，保留该类型；如果类型不同，使用 "string" 作为通用类型
+                            String oldType = oldVal.getType();
+                            String newType = newVal.getType();
+                            if (oldType == null || oldType.isEmpty()) {
+                                oldVal.setType(newType != null ? newType : "string");
+                            } else if (newType != null && !newType.isEmpty() && !oldType.equals(newType)) {
+                                // 类型不一致，统一为 "string"
+                                oldVal.setType("string");
                             }
+                            // 如果类型相同，保持原类型不变
+                            
                             // 合并 Map 值（如果存在，保留第一个非空的 Map 值）
                             if (newVal.getMapValue() != null && oldVal.getMapValue() == null) {
                                 oldVal.setMapValue(newVal.getMapValue());
@@ -987,6 +1013,10 @@ public  class PostDslConfigFactory {
         } else {
             item.setCategory("key");
             item.setValueObject(inferValueObjectType(value));
+            // 对于简单类型，设置 defaultValue
+            if (value != null) {
+                item.setDefaultValue(value.toString());
+            }
         }
         
         return item;

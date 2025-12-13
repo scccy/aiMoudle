@@ -12,7 +12,7 @@ import com.origin.aimodel.domain.vo.ReverseParseRequest;
 import com.origin.aimodel.domain.vo.ReverseParseResponse;
 import com.origin.aimodel.service.ReverseParseService;
 import com.origin.aimodel.util.spel.MappingItem;
-import com.origin.aimodel.util.spel.PostDslConfigFactory;
+import com.origin.aimodel.util.spel.ReverseDslFactory;
 import com.origin.aimodel.util.spel.ReverseDsl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,9 +47,9 @@ public class ReverseParseServiceImpl implements ReverseParseService {
             JSONObject requestBody = new JSONObject(request.getRequestBody());
             Map<String, Object> bodyMap = requestBody.toJavaObject(Map.class);
 
-            // 使用 PostDslConfigFactory 直接生成完整配置
-            List<MappingItem> paramItems = PostDslConfigFactory.generateBasicParamMapping(bodyMap);
-            List<MappingItem> headerItems = PostDslConfigFactory.generateBasicHeaderMapping(request.getRequestHeaders());
+            // 使用 ReverseDslFactory 直接生成完整配置
+            List<MappingItem> paramItems = ReverseDslFactory.generateBasicParamMapping(bodyMap);
+            List<MappingItem> headerItems = ReverseDslFactory.generateBasicHeaderMapping(request.getRequestHeaders());
 
             // 如果用户提供了自定义映射，则使用 ReverseDsl 进行转换
             // 否则直接使用生成的配置
@@ -60,21 +60,21 @@ public class ReverseParseServiceImpl implements ReverseParseService {
                 JSONObject headerMappingConfig = buildHeaderMappingConfig(request.getHeaderMapping());
 
                 ReverseDsl.Builder paramBuilder = ReverseDsl.build(requestBody, paramMappingConfig);
-                JSONObject generatedParamItem = paramBuilder.getParam();
+                List<MappingItem> generatedParamItems = paramBuilder.getParamItems();
 
                 ReverseDsl.Builder headerBuilder = ReverseDsl.build(requestBody, headerMappingConfig)
                         .withHeaders(request.getRequestHeaders());
-                JSONObject generatedHeaderItem = headerBuilder.getHeader();
+                List<MappingItem> generatedHeaderItems = headerBuilder.getHeaderItems();
 
                 ReverseParseResponse response = new ReverseParseResponse();
-                response.setParamItems(convertToMappingItemList(generatedParamItem.getJSONArray("paramItem")));
-                response.setHeaderItems(convertToMappingItemList(generatedHeaderItem.getJSONArray("headerItem")));
+                response.setParamItems(generatedParamItems);
+                response.setHeaderItems(generatedHeaderItems);
                 return response;
             } else {
                 // 直接使用生成的完整配置
                 ReverseParseResponse response = new ReverseParseResponse();
-                response.setParamItems(convertItemsToMappingItemList(paramItems));
-                response.setHeaderItems(convertItemsToMappingItemList(headerItems));
+                response.setParamItems(paramItems);
+                response.setHeaderItems(headerItems);
                 return response;
             }
         } catch (Exception e) {
@@ -196,32 +196,4 @@ public class ReverseParseServiceImpl implements ReverseParseService {
         return config;
     }
 
-    private List<com.origin.aimodel.util.spel.MappingItem> convertToMappingItemList(JSONArray array) {
-        List<com.origin.aimodel.util.spel.MappingItem> items = new ArrayList<>();
-
-        if (array != null) {
-            for (int i = 0; i < array.size(); i++) {
-                JSONObject itemObj = array.getJSONObject(i);
-                com.origin.aimodel.util.spel.MappingItem item = new com.origin.aimodel.util.spel.MappingItem();
-                item.key = itemObj.getString("key");
-                item.category = itemObj.getString("category");
-                item.node = itemObj.getString("node");
-                item.postParam = itemObj.getString("post_param");
-                item.spelTemp = itemObj.getString("spel_temp");
-                item.defaultValue = itemObj.getString("default_value");
-                item.valueObject = itemObj.getString("value_object");
-                item.validate = itemObj.getString("validate");
-                items.add(item);
-            }
-        }
-
-        return items;
-    }
-
-    /**
-     * 将 MappingItem 列表转换为 MappingItem 列表（直接返回，无需转换）
-     */
-    private List<com.origin.aimodel.util.spel.MappingItem> convertItemsToMappingItemList(List<com.origin.aimodel.util.spel.MappingItem> items) {
-        return items != null ? items : new ArrayList<>();
-    }
 }

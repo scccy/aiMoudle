@@ -53,12 +53,22 @@
           @change="handleValueObjectChange"
           style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; background: white;"
         >
+          <!-- 基础类型 -->
           <option value="string">📝 文本 (string) - 单个文本值，示例: "hello world"</option>
           <option value="int">🔢 整数 (int) - 整数，示例: 100</option>
+          <option value="long">🔢 长整数 (long) - 长整数，示例: 1000000000</option>
           <option value="double">🔢 小数 (double) - 小数，示例: 3.14</option>
-          <option :value="'list<string>'">📋 文本列表 (list&lt;string&gt;) - 多个文本值，示例: ["文本1", "文本2", "文本3"]</option>
-          <option :value="'list<json>'">📦 对象列表 (list&lt;json&gt;) - 多个对象，示例: [{"type": "text"}, {"url": "..."}]</option>
+          <option value="decimal">🔢 精确小数 (decimal) - 精确小数，示例: 0.5</option>
+          <option value="boolean">✅ 布尔值 (boolean) - 布尔值，示例: true/false</option>
+          <!-- 对象类型 -->
           <option value="map">📦 单个对象 (map) - 一个对象，示例: {"key": "value", "name": "..."}</option>
+          <option value="json">📦 JSON对象 (json) - JSON对象，示例: {"key": "value"}</option>
+          <!-- 列表类型 -->
+          <option :value="'list<string>'">📋 文本列表 (list&lt;string&gt;) - 多个文本值，示例: ["文本1", "文本2"]</option>
+          <option :value="'list<int>'">📋 整数列表 (list&lt;int&gt;) - 多个整数，示例: [1, 2, 3]</option>
+          <option :value="'list<double>'">📋 小数列表 (list&lt;double&gt;) - 多个小数，示例: [1.1, 2.2, 3.3]</option>
+          <option :value="'list<boolean>'">📋 布尔列表 (list&lt;boolean&gt;) - 多个布尔值，示例: [true, false]</option>
+          <option :value="'list<json>'">📦 对象列表 (list&lt;json&gt;) - 多个对象，示例: [{"type": "text"}, {"url": "..."}]</option>
         </select>
       </div>
       <div>

@@ -1,12 +1,15 @@
 package com.origin.aimodel.util.spel;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 
+import java.util.List;
 import java.util.Map;
 
 /**
- * 反向解析 DSL：从实际请求的 header/body + 映射关系生成 headerItem 和 paramItem 配置。
+ * 反向解析 DSL：第三层（API层）
  * 提供建造者模式接口，便于链式调用。
+ * 全部基于 ReverseParser 实现。
  */
 public final class ReverseDsl {
 
@@ -49,57 +52,93 @@ public final class ReverseDsl {
         }
 
         /**
-         * 生成 paramItem 配置对象
+         * 生成 paramItem 配置列表
+         * 
+         * @return paramItem 配置列表
+         */
+        public List<MappingItem> getParamItems() {
+            Map<String, Object> bodyMap = requestBody.toJavaObject(Map.class);
+            return ReverseParser.parseParamItems(bodyMap, mappingConfig);
+        }
+
+        /**
+         * 生成 paramItem 配置对象（兼容旧接口）
          * 
          * @return paramItem 配置 JSONObject
          */
         public JSONObject getParam() {
-            return ReverseParser.getParamItemObject(requestBody, mappingConfig);
+            List<MappingItem> items = getParamItems();
+            JSONObject result = new JSONObject();
+            JSONArray paramItems = new JSONArray();
+            for (MappingItem item : items) {
+                JSONObject obj = new JSONObject();
+                if (item.key != null) obj.put("key", item.key);
+                if (item.category != null) obj.put("category", item.category);
+                if (item.node != null) obj.put("node", item.node);
+                if (item.postParam != null) obj.put("post_param", item.postParam);
+                if (item.valueObject != null) obj.put("value_object", item.valueObject);
+                if (item.spelTemp != null) obj.put("spel_temp", item.spelTemp);
+                if (item.defaultValue != null) obj.put("default_value", item.defaultValue);
+                if (item.validate != null) obj.put("validate", item.validate);
+                paramItems.add(obj);
+            }
+            result.put("paramItem", paramItems);
+            return result;
         }
 
         /**
-         * 生成 paramItem 配置（JSON 字符串）
+         * 生成 paramItem 配置（JSON 字符串，兼容旧接口）
          * 
          * @return paramItem 配置 JSON 字符串
          */
         public String getParamString() {
-            return ReverseParser.getParamItem(requestBody, mappingConfig);
+            return getParam().toJSONString();
         }
 
         /**
-         * 生成 headerItem 配置对象
+         * 生成 headerItem 配置列表
+         * 
+         * @return headerItem 配置列表
+         */
+        public List<MappingItem> getHeaderItems() {
+            if (requestHeaders == null) {
+                throw new IllegalStateException("Request headers not set. Call withHeaders() first.");
+            }
+            return ReverseParser.parseHeaderItems(requestHeaders, mappingConfig);
+        }
+
+        /**
+         * 生成 headerItem 配置对象（兼容旧接口）
          * 
          * @return headerItem 配置 JSONObject
          */
         public JSONObject getHeader() {
-            if (requestHeaders == null) {
-                throw new IllegalStateException("Request headers not set. Call withHeaders() first.");
+            List<MappingItem> items = getHeaderItems();
+            JSONObject result = new JSONObject();
+            JSONArray headerItems = new JSONArray();
+            for (MappingItem item : items) {
+                JSONObject obj = new JSONObject();
+                if (item.key != null) obj.put("key", item.key);
+                if (item.category != null) obj.put("category", item.category);
+                if (item.node != null) obj.put("node", item.node);
+                if (item.postParam != null) obj.put("post_param", item.postParam);
+                if (item.valueObject != null) obj.put("value_object", item.valueObject);
+                if (item.spelTemp != null) obj.put("spel_temp", item.spelTemp);
+                if (item.defaultValue != null) obj.put("default_value", item.defaultValue);
+                if (item.validate != null) obj.put("validate", item.validate);
+                headerItems.add(obj);
             }
-            return ReverseParser.getHeaderItemObject(requestHeaders, mappingConfig);
+            result.put("headerItem", headerItems);
+            return result;
         }
 
         /**
-         * 生成 headerItem 配置（JSON 字符串）
+         * 生成 headerItem 配置（JSON 字符串，兼容旧接口）
          * 
          * @return headerItem 配置 JSON 字符串
          */
         public String getHeaderString() {
-            if (requestHeaders == null) {
-                throw new IllegalStateException("Request headers not set. Call withHeaders() first.");
-            }
-            return ReverseParser.getHeaderItem(requestHeaders, mappingConfig);
-        }
-
-        public JSONObject requestBody() {
-            return requestBody;
-        }
-
-        public JSONObject mappingConfig() {
-            return mappingConfig;
-        }
-
-        public Map<String, String> requestHeaders() {
-            return requestHeaders;
+            return getHeader().toJSONString();
         }
     }
 }

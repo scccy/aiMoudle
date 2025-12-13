@@ -57,7 +57,7 @@ public class ForwardRequestServiceImpl implements ForwardRequestService {
         }
 
         List<DimAiModelItemMp> items = loadModelItems(request.getModelName());
-        PostDslConfig dslConfig = PostDslConfigFactory.fromModel(model, items);
+        PostDslConfig dslConfig = ReverseDslFactory.fromModel(model, items);
 
         // 合并 baseInfo 与前端 payload
         Map<String, Object> baseInfoMap = ConfigParser.parseBaseInfo(dslConfig.baseInfo());
