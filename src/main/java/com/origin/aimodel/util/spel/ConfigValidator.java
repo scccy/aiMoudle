@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 读取 ParamConfigEntry 的 validate 字段（可扩展 maxLength/range/enum 等）。
+ * 读取 MappingItem 的 validate 字段（可扩展 maxLength/range/enum 等）。
  * 暴露 validate(entries, payload)，返回 ValidationResult。
  * Runner.validate() 直接委托到这里。
  */
@@ -25,7 +25,7 @@ public class ConfigValidator {
     
     /** 校验 payload 与配置的匹配度（长度/数值范围/枚举）。 */
     public static ValidationResult validateParam(PostDslConfig config, Map<String, Object> payload) {
-        List<ConfigParser.ParamConfigEntry> entries = ConfigParser.parseConfig(config.paramItem());
+        List<MappingItem> entries = ConfigParser.parseConfig(config.paramItem());
         Map<String, Object> merged = new LinkedHashMap<>(ConfigParser.parseBaseInfo(config.baseInfo()));
         if (payload != null) {
             merged.putAll(payload);
@@ -33,24 +33,24 @@ public class ConfigValidator {
         return validateEntries(entries, merged);
     }
     
-    private static ValidationResult validateEntries(List<ConfigParser.ParamConfigEntry> entries, Map<String, Object> payload) {
+    private static ValidationResult validateEntries(List<MappingItem> entries, Map<String, Object> payload) {
         List<String> errors = new ArrayList<>();
-        for (ConfigParser.ParamConfigEntry entry : entries) {
-            Object val = payload.get(entry.key);
+        for (MappingItem entry : entries) {
+            Object val = payload.get(entry.getKey());
             if (val == null) {
                 continue;
             }
             
             // 如果有 validate 规则，则根据规则校验
-            if (entry.validate != null && !entry.validate.isEmpty()) {
+            if (entry.getValidate() != null && !entry.getValidate().isEmpty()) {
                 try {
-                    JSONObject validateObj = JSON.parseObject(entry.validate);
+                    JSONObject validateObj = JSON.parseObject(entry.getValidate());
                     for (String ruleKey : validateObj.keySet()) {
                         switch (ruleKey) {
                             case "maxLength":
                                 Integer maxLength = validateObj.getInteger("maxLength");
                                 if (maxLength != null && val instanceof String str && str.length() > maxLength) {
-                                    errors.add(entry.key + " length exceeds " + maxLength);
+                                    errors.add(entry.getKey() + " length exceeds " + maxLength);
                                 }
                                 break;
                             case "range":
@@ -60,7 +60,7 @@ public class ConfigValidator {
                                     double max = rangeArray.getDoubleValue(1);
                                     Double num = parseNumber(val);
                                     if (num != null && (num < min || num > max)) {
-                                        errors.add(entry.key + " out of range [" + min + "," + max + "]");
+                                        errors.add(entry.getKey() + " out of range [" + min + "," + max + "]");
                                     }
                                 }
                                 break;
@@ -75,7 +75,7 @@ public class ConfigValidator {
                                         }
                                     }
                                     if (!match) {
-                                        errors.add(entry.key + " not in enum " + enumArray.toString());
+                                        errors.add(entry.getKey() + " not in enum " + enumArray.toString());
                                     }
                                 }
                                 break;
@@ -93,15 +93,15 @@ public class ConfigValidator {
         return new ValidationResult(errors);
     }
     
-    private static void fallbackValidation(ConfigParser.ParamConfigEntry entry, Object val, List<String> errors) {
+    private static void fallbackValidation(MappingItem entry, Object val, List<String> errors) {
         // 对于没有 validate 配置的情况，直接跳过校验
         // 可以选择添加最基本的类型检查，但避免任何硬编码的业务规则
-        String type = entry.valueObject != null ? entry.valueObject : "string";
+        String type = entry.getValueObject() != null ? entry.getValueObject() : "string";
         
         if (val instanceof String s) {
             // 只保留最基本的长度检查，防止过长字符串
             if ("string".equals(type) && s.length() > 2500) {
-                errors.add(entry.key + " length exceeds 2500");
+                errors.add(entry.getKey() + " length exceeds 2500");
             }
             // 移除了对硬编码枚举规则的检查
         }
@@ -110,7 +110,7 @@ public class ConfigValidator {
         if (type.equals("int") || type.equals("double") || type.equals("float")) {
             Double num = parseNumber(val);
             if (num == null) {
-                errors.add(entry.key + " is not a number");
+                errors.add(entry.getKey() + " is not a number");
             }
             // 移除了硬编码的 [0,1] 范围检查，让配置决定有效范围
         }

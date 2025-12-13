@@ -1,5 +1,6 @@
 package com.origin.aimodel.domain.vo;
 
+import com.origin.aimodel.util.spel.MappingItem;
 import lombok.Data;
 
 import java.util.List;
@@ -17,26 +18,10 @@ public class ReverseParseResponse {
     /**
      * 生成的 paramItem 配置列表
      */
-    private List<ConfigItem> paramItems;
+    private List<MappingItem> paramItems;
 
     /**
      * 生成的 headerItem 配置列表
      */
-    private List<ConfigItem> headerItems;
-
-    /**
-     * 配置项
-     */
-    @Data
-    public static class ConfigItem {
-        private String key;
-        private String category;
-        private String node;
-        private String postParam;
-        private String spelTemp;
-        private String defaultValue;
-        private String valueObject;
-        private String validate;
-    }
+    private List<MappingItem> headerItems;
 }
-

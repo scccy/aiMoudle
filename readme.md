@@ -54,7 +54,7 @@ String url = PostDsl.getUrlPreviewNew(config, payload);
 | `spel_temp` | 否 | 字符串模板，`{value}` 会被替换为实际值（注意：非 SpEL 表达式） | `" --ratio {value}"` |
 | `default_value` | 否 | 缺省值，当入参不存在时使用 | `"text"` |
 | `value_object` | 否 | 类型提示：`string`、`int`、`double`、`list<string>`、`list<json>`、`map` | `"string"` |
-| `validate` | 否 | 校验规则（JSON 字符串格式），支持 `maxLength`、`range`、`enum` | `"{\"maxLength\":100}"` |
+| `validate` | 否 | 校验规则（JSON 对象），支持 `maxLength`、`range`、`enum` | `{"maxLength":100}` |
 
 ### 使用场景
 
@@ -150,7 +150,27 @@ String url = PostDsl.getUrlPreviewNew(config, payload);
   "key": "image_list",
   "category": "list",
   "node": "content",
-  "spel_temp": "{\"paramItem\":[{\"key\":\"type\",\"node\":\"type\",\"post_param\":\"type\",\"default_value\":\"image_url\"},{\"key\":\"url\",\"node\":\"image_url.url\",\"post_param\":\"url\"},{\"key\":\"role\",\"node\":\"role\",\"post_param\":\"role\",\"default_value\":\"reference_image\"}]}",
+  "spel_temp": {
+    "paramItem": [
+      {
+        "key": "type",
+        "node": "type",
+        "post_param": "type",
+        "default_value": "image_url"
+      },
+      {
+        "key": "url",
+        "node": "image_url.url",
+        "post_param": "url"
+      },
+      {
+        "key": "role",
+        "node": "role",
+        "post_param": "role",
+        "default_value": "reference_image"
+      }
+    ]
+  },
   "value_object": "list<json>"
 }
 ```
@@ -184,6 +204,52 @@ payload.put("image_list", imageList);
 - `spel_temp` 中定义嵌套的 `paramItem`，描述列表中每个元素的结构
 - 嵌套 `paramItem` 的 `node` 路径是相对路径（如 `image_url.url`），不需要包含数组索引
 - 如果 `content` 数组已存在其他元素，会自动合并
+
+---
+
+#### 场景 5bis：用 `content` + `spel_temp` 描述列表元素结构（推荐表达）
+
+**需求：** 对 `content` 这种 `list<json>`，用相对路径描述元素字段，避免固定下标。
+
+**配置：**
+```json
+{
+  "key": "content",
+  "category": "list",
+  "node": "content",
+  "value_object": "list<json>",
+  "spel_temp": {
+    "paramItem": [
+      {
+        "key": "type",
+        "node": "type",
+        "post_param": "type",
+        "default_value": "image_url"
+      },
+      {
+        "key": "text",
+        "node": "text",
+        "post_param": "text"
+      },
+      {
+        "key": "image_url",
+        "node": "image_url.url",
+        "post_param": "url"
+      },
+      {
+        "key": "role",
+        "node": "role",
+        "post_param": "role",
+        "default_value": "reference_image"
+      }
+    ]
+  }
+}
+```
+
+**说明：**
+- `node` 指向整个列表，`paramItem` 中的 `node` 是元素内部的相对路径，不需要下标。
+- 相比 `content[0].text` 这类写法，更通用、更清晰，也方便程序解析与合并。
 
 ---
 
@@ -228,21 +294,23 @@ payload.put("image_list", imageList);
 `headerItem` 配置格式与 `paramItem` 相同，用于生成 HTTP 请求头：
 
 ```json
-{ "headerItem":
-  {
-    "key": "contentTypeHeader",
-    "category": "key",
-    "node": "Content-Type",
-    "post_param": "Content-Type",
-    "default_value": "application/json",
-    "value_object": "string"
-  }
+{
+  "headerItem": [
+    {
+      "key": "contentTypeHeader",
+      "category": "key",
+      "node": "Content-Type",
+      "post_param": "Content-Type",
+      "default_value": "application/json",
+      "value_object": "string"
+    }
+  ]
 }
 ```
 
 ## validate 校验规则
 
-`validate` 字段用于定义参数的校验规则，是一个 JSON 字符串格式。支持的校验类型：
+`validate` 字段用于定义参数的校验规则，使用 JSON 对象书写。支持的校验类型：
 
 ### maxLength（最大长度）
 适用于字符串类型，限制字符串的最大长度。
@@ -252,7 +320,7 @@ payload.put("image_list", imageList);
   "key": "prompt",
   "category": "key",
   "node": "content[0].text",
-  "validate": "{\"maxLength\":2000}"
+  "validate": {"maxLength": 2000}
 }
 ```
 
@@ -265,7 +333,7 @@ payload.put("image_list", imageList);
   "category": "key",
   "node": "temperature",
   "value_object": "double",
-  "validate": "{\"range\":[0.0,2.0]}"
+  "validate": {"range": [0.0, 2.0]}
 }
 ```
 
@@ -277,7 +345,7 @@ payload.put("image_list", imageList);
   "key": "content_type",
   "category": "key",
   "node": "content[0].type",
-  "validate": "{\"enum\":[\"text\",\"image_url\"]}"
+  "validate": {"enum": ["text", "image_url"]}
 }
 ```
 
@@ -401,9 +469,8 @@ JSONObject generatedHeaderItem = headerBuilder.getHeader();
 1. **配置格式：** 配置 JSON 需保持规范，工具不做严格校验
 2. **默认值：** `default_value` 仅用于确需兜底的字段，无值即跳过字段
 3. **模板限制：** `{value}` 模板仅适用于字符串类型
-4. **转义字符：** `spel_temp` 中的 JSON 字符串需要正确转义（`\"`）
-5. **路径索引：** 数组索引从 0 开始，如 `content[0]` 表示第一个元素
-6. **嵌套 paramItem：** `node` 路径写相对路径即可，无需包含父级路径
+4. **路径索引：** 数组索引从 0 开始，如 `content[0]` 表示第一个元素
+5. **嵌套 paramItem：** `node` 路径写相对路径即可，无需包含父级路径
 
 ## 完整示例
 

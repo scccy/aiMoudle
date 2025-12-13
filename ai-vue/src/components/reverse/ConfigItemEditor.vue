@@ -13,7 +13,7 @@
       <div>
         <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">处理类型 (category)</label>
         <select 
-          :value="item.category"
+          :value="item.category || 'key'"
           @change="updateField('category', $event.target.value)"
           style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; background: white;"
         >
@@ -49,16 +49,16 @@
       <div>
         <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">类型 (value_object)</label>
         <select 
-          :value="item.valueObject"
-          @change="updateField('valueObject', $event.target.value)"
+          v-model="localValueObject"
+          @change="handleValueObjectChange"
           style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; background: white;"
         >
-          <option value="string">string - 字符串</option>
-          <option value="int">int - 整数</option>
-          <option value="double">double - 浮点数</option>
-          <option :value="'list<string>'">list&lt;string&gt; - 字符串列表</option>
-          <option :value="'list<json>'">list&lt;json&gt; - JSON列表</option>
-          <option value="map">map - 对象</option>
+          <option value="string">📝 文本 (string) - 单个文本值，示例: "hello world"</option>
+          <option value="int">🔢 整数 (int) - 整数，示例: 100</option>
+          <option value="double">🔢 小数 (double) - 小数，示例: 3.14</option>
+          <option :value="'list<string>'">📋 文本列表 (list&lt;string&gt;) - 多个文本值，示例: ["文本1", "文本2", "文本3"]</option>
+          <option :value="'list<json>'">📦 对象列表 (list&lt;json&gt;) - 多个对象，示例: [{"type": "text"}, {"url": "..."}]</option>
+          <option value="map">📦 单个对象 (map) - 一个对象，示例: {"key": "value", "name": "..."}</option>
         </select>
       </div>
       <div>
@@ -72,7 +72,8 @@
       </div>
     </div>
     
-    <div style="margin-bottom: 8px;">
+    <!-- 当 value_object 不是 list<json> 时，显示 spel_temp 输入框 -->
+    <div v-if="item.valueObject !== 'list<json>' && !nested" style="margin-bottom: 8px;">
       <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">字符串模板 (spel_temp) <span style="color: #999; font-weight: normal;">可选</span></label>
       <input 
         :value="item.spelTemp"
@@ -81,6 +82,16 @@
         style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
       />
     </div>
+    
+    <!-- 当 value_object 是 list<json> 时，显示嵌套配置编辑器 -->
+    <NestedItemEditor
+      v-if="item.valueObject === 'list<json>'"
+      :spel-temp="item.spelTemp || ''"
+      :show="item.valueObject === 'list<json>'"
+      :node="item.node"
+      :request-body="requestBody"
+      @update:spel-temp="(val) => updateField('spelTemp', val)"
+    />
     
     <!-- 校验规则编辑器 -->
     <ValidateRuleEditor 
@@ -91,7 +102,9 @@
 </template>
 
 <script setup>
+import { computed, ref, watch } from 'vue'
 import ValidateRuleEditor from './ValidateRuleEditor.vue'
+import NestedItemEditor from './NestedItemEditor.vue'
 
 const props = defineProps({
   item: {
@@ -113,10 +126,26 @@ const props = defineProps({
   defaultValuePlaceholder: {
     type: String,
     default: '例如: text'
+  },
+  requestBody: {
+    type: Object,
+    default: () => ({})
+  },
+  nested: {
+    type: Boolean,
+    default: false
   }
 })
 
 const emit = defineEmits(['update:item'])
+
+// 使用本地状态控制 select 的值
+const localValueObject = ref(props.item.valueObject || 'string')
+
+// 监听 props.item.valueObject 变化，同步到本地状态
+watch(() => props.item.valueObject, (newVal) => {
+  localValueObject.value = newVal || 'string'
+}, { immediate: true })
 
 // 获取校验规则的字符串格式
 const getValidateString = (validate) => {
@@ -129,6 +158,25 @@ const getValidateString = (validate) => {
 const updateField = (field, value) => {
   const updatedItem = { ...props.item, [field]: value }
   emit('update:item', updatedItem)
+}
+
+// 处理 value_object 变化
+const handleValueObjectChange = () => {
+  const newValue = localValueObject.value
+  const oldValue = props.item.valueObject
+  
+  // 如果从 list<json> 切换到其他类型，提示用户
+  if (oldValue === 'list<json>' && newValue !== 'list<json>') {
+    if (confirm('切换类型将清空嵌套配置，是否继续？')) {
+      const updatedItem = { ...props.item, valueObject: newValue, spelTemp: '' }
+      emit('update:item', updatedItem)
+    } else {
+      // 用户取消，恢复原值
+      localValueObject.value = oldValue
+    }
+  } else {
+    updateField('valueObject', newValue)
+  }
 }
 </script>
 

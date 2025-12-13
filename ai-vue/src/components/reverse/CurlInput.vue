@@ -104,8 +104,8 @@ function parseCurlCommand(curlStr) {
     }
   }
 
-  // 提取所有 Headers (-H 参数)
-  const headerPattern = /-H\s+["']([^"']+):\s*([^"']+)["']/gi
+  // 提取所有 Headers (支持 -H 和 --header 两种格式)
+  const headerPattern = /(?:-H|--header)\s+["']([^"']+):\s*([^"']+)["']/gi
   const headers = {}
   let headerMatch
   
@@ -125,13 +125,16 @@ function parseCurlCommand(curlStr) {
     result.requestHeaders = headers
   }
 
-  // 提取 -d 后面的 JSON body
-  // 支持多种格式：-d '{...}' 或 -d $'...' 或多行格式
+  // 提取 -d 或 --data-raw 后面的 JSON body
+  // 支持多种格式：-d '{...}' 或 --data-raw '{...}' 或多行格式
   let jsonStr = null
-  const dataIndex = curlStr.search(/-d\s+/i)
+  // 同时匹配 -d 和 --data-raw
+  const dataPattern = /(?:-d|--data-raw)\s+/i
+  const dataIndex = curlStr.search(dataPattern)
   if (dataIndex !== -1) {
-    // 找到 -d 后面的内容开始位置
-    let startPos = dataIndex + curlStr.substring(dataIndex).match(/-d\s+/i)[0].length
+    // 找到 -d 或 --data-raw 后面的内容开始位置
+    const match = curlStr.substring(dataIndex).match(dataPattern)
+    let startPos = dataIndex + match[0].length
     let remaining = curlStr.substring(startPos).trim()
     
     // 检查第一个字符是否是引号

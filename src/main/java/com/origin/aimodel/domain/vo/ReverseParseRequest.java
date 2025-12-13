@@ -1,5 +1,6 @@
 package com.origin.aimodel.domain.vo;
 
+import com.origin.aimodel.util.spel.MappingItem;
 import lombok.Data;
 
 import java.util.List;
@@ -66,13 +67,13 @@ public class ReverseParseRequest {
      * 编辑后的 paramItem 配置项（用于保存）
      * 格式：[{"key": "prompt", "category": "key", "node": "content[0].text", ...}, ...]
      */
-    private List<ConfigItem> paramItems;
+    private List<MappingItem> paramItems;
 
     /**
      * 编辑后的 headerItem 配置项（用于保存）
      * 格式：[{"key": "contentTypeHeader", "category": "key", "node": "Content-Type", ...}, ...]
      */
-    private List<ConfigItem> headerItems;
+    private List<MappingItem> headerItems;
 
     /**
      * 映射配置项
@@ -101,19 +102,4 @@ public class ReverseParseRequest {
         private String validate;
     }
 
-    /**
-     * 配置项（用于保存编辑后的配置）
-     */
-    @Data
-    public static class ConfigItem {
-        private String key;
-        private String category;
-        private String node;
-        private String postParam;
-        private String spelTemp;
-        private String defaultValue;
-        private String valueObject;
-        private String validate;
-    }
 }
-

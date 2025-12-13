@@ -28,12 +28,12 @@ public final class PostDsl {
     }
 
     /** 解析 headerItem/paramItem 配置字符串，提取字段属性。 */
-    public static List<ConfigParser.ParamConfigEntry> parseConfig(String config) {
+    public static List<MappingItem> parseConfig(String config) {
         return ConfigParser.parseConfig(config);
     }
 
     /** 根据配置与输入 payload 构造结果结构。 */
-    public static Map<String, Object> buildResult(List<ConfigParser.ParamConfigEntry> entries, Map<String, Object> payload) {
+    public static Map<String, Object> buildResult(List<MappingItem> entries, Map<String, Object> payload) {
         return PayloadEngine.buildResult(entries, payload);
     }
 
@@ -73,7 +73,7 @@ public final class PostDsl {
     }
 
     /** 构造 header 预览字符串，支持传入 payload 覆盖默认值。 */
-    public static String buildHeaderPreview(List<ConfigParser.ParamConfigEntry> entries, Map<String, Object> payload) {
+    public static String buildHeaderPreview(List<MappingItem> entries, Map<String, Object> payload) {
         return PayloadEngine.buildHeaderPreview(entries, payload);
     }
 

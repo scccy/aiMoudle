@@ -363,7 +363,7 @@ public class ReverseParser {
      * 根据路径从 Map 中提取值
      * 支持简单路径如 "model" 和复杂路径如 "content[0].text"
      */
-    private static Object extractValueByPath(Map<String, Object> map, String path) {
+    public static Object extractValueByPath(Map<String, Object> map, String path) {
         if (path == null || path.isEmpty()) {
             return null;
         }

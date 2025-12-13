@@ -90,7 +90,8 @@ const addParameter = () => {
     type: 'string',
     value: ''
   })
-  emitValue()
+  // 不立即 emitValue，等用户输入 key 后再 emit
+  // 这样可以避免 watch 清空刚添加的参数
 }
 
 const removeParameter = (index) => {
@@ -139,23 +140,32 @@ const emitValue = () => {
 // 监听外部 modelValue 变化
 watch(() => props.modelValue, (newVal) => {
   if (newVal && typeof newVal === 'object' && !Array.isArray(newVal)) {
-    const currentKeys = new Set(parameters.value.map(p => p.key))
+    const currentKeys = new Set(parameters.value.map(p => p.key).filter(k => k && k.trim()))
     const newKeys = new Set(Object.keys(newVal))
     
-    // 如果键集合不同，重新初始化
-    if (currentKeys.size !== newKeys.size || 
-        [...currentKeys].some(k => !newKeys.has(k))) {
+    // 检查是否有未完成的参数（key 为空）
+    const hasIncompleteParams = parameters.value.some(p => !p.key || !p.key.trim())
+    
+    // 如果键集合不同且没有未完成的参数，重新初始化
+    if (!hasIncompleteParams && 
+        (currentKeys.size !== newKeys.size || 
+         [...currentKeys].some(k => !newKeys.has(k)))) {
       initParameters()
-    } else {
-      // 只更新值
+    } else if (!hasIncompleteParams) {
+      // 只更新值（当没有未完成的参数时）
       parameters.value.forEach(param => {
-        if (newVal[param.key] !== undefined) {
+        if (param.key && param.key.trim() && newVal[param.key] !== undefined) {
           param.value = newVal[param.key]
         }
       })
     }
+    // 如果有未完成的参数，不进行任何操作，让用户继续编辑
   } else if (!newVal || Object.keys(newVal).length === 0) {
-    parameters.value = []
+    // 只有在没有任何参数时才清空（包括未完成的参数）
+    const hasAnyParams = parameters.value.length > 0
+    if (!hasAnyParams) {
+      parameters.value = []
+    }
   }
 }, { deep: true })
 
