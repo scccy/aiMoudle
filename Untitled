@@ -1,0 +1,13 @@
+Request ID: 07aa634c-04f4-4580-b5c4-a48761193d90
+{"error":"ERROR_USER_ABORTED_REQUEST","details":{"title":"User aborted request.","detail":"Tool call ended before result was received","isRetryable":false,"additionalInfo":{},"buttons":[],"planChoices":[]},"isExpected":true}
+ConnectError: [resource_exhausted] Error
+    at _Gc.$endAiConnectTransportReportError (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:12155:455960)
+    at lBo._doInvokeHandler (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:12807:22831)
+    at lBo._invokeHandler (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:12807:22573)
+    at lBo._receiveRequest (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:12807:21335)
+    at lBo._receiveOneMessage (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:12807:20152)
+    at $Lt.value (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:12807:18244)
+    at Ee._deliver (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:49:2962)
+    at Ee.fire (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:49:3283)
+    at Cvt.fire (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:12140:12156)
+    at MessagePort.<anonymous> (vscode-file://vscode-app/Applications/Cursor.app/Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js:14806:18433)
