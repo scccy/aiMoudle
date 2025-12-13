@@ -1,8 +1,8 @@
 package com.origin.aimodel.util.spel.demo;
 
 import com.origin.aimodel.domain.vo.AiTaskQuery;
-import com.origin.aimodel.util.spel.SpelDsl;
-import com.origin.aimodel.util.spel.SpelDslConfig;
+import com.origin.aimodel.util.spel.PostDsl;
+import com.origin.aimodel.util.spel.PostDslConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -176,8 +176,8 @@ public class SpelDemoNew {
             }
             """;
 
-    private static final SpelDslConfig CONFIG =
-            new SpelDslConfig(BASE_INFO, HEADER_ITEM, TEXT_TO_VIDEO_PARAM_ITEM);
+    private static final PostDslConfig CONFIG =
+            new PostDslConfig(BASE_INFO, HEADER_ITEM, TEXT_TO_VIDEO_PARAM_ITEM);
 
     public void taskStart(AiTaskQuery aiTaskQuery) {
         java.util.LinkedHashMap<String, Object> payload = new java.util.LinkedHashMap<>();
@@ -188,9 +188,9 @@ public class SpelDemoNew {
             payload.put("model_name", aiTaskQuery.getModelName());
         }
 
-        SpelDsl.Runner runner = SpelDsl.Runner(CONFIG, payload);
-        log.info("header preview:\n{}", runner.headerPreview());
-        log.info("param preview:\n{}", runner.paramPreview());
-        log.info("url preview: {}", runner.urlPreview());
+        PostDsl.Builder builder = PostDsl.build(CONFIG, payload);
+        log.info("header preview:\n{}", builder.getHeader());
+        log.info("param preview:\n{}", builder.getParam());
+        log.info("url preview: {}", builder.getUrl());
     }
 }

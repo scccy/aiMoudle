@@ -4,5 +4,17 @@
 # Build output
 target/
 
+# Vue3 frontend artifacts
+ai-vue/node_modules/
+ai-vue/dist/
+ai-vue/dist-ssr/
+ai-vue/.vite/
+ai-vue/.pnpm-store/
+ai-vue/npm-debug.log*
+ai-vue/yarn-debug.log*
+ai-vue/pnpm-debug.log*
+ai-vue/.env.local
+ai-vue/.env.*.local
+
 # OS
 .DS_Store

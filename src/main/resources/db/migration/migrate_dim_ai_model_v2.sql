@@ -2,10 +2,8 @@
 -- 将 headerItem 和 paramItem 拆分到独立的明细表 dim_ai_model_item
 -- 废弃字段：in_parameter, out_parameter, template_spel, template_header, template_param_json_plus, header_item, param_item
 
--- 1. 备份原表
-RENAME TABLE dim_ai_model TO dim_ai_model_bck;
 
--- 2. 创建新的主表结构（移除 header_item 和 param_item）
+-- 1. 创建新的主表结构（移除 header_item 和 param_item）
 CREATE TABLE dim_ai_model (
     model_name VARCHAR(255) NOT NULL COMMENT '模型名称',
     origin_name VARCHAR(255) COMMENT '原始名称',
@@ -20,12 +18,12 @@ CREATE TABLE dim_ai_model (
     PRIMARY KEY (model_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI模型配置表';
 
--- 3. 创建明细表，存储 headerItem 和 paramItem 配置项
+-- 2. 创建明细表，存储 headerItem 和 paramItem 配置项
 CREATE TABLE dim_ai_model_item (
     id BIGINT AUTO_INCREMENT NOT NULL COMMENT '主键ID',
     model_name VARCHAR(255) NOT NULL COMMENT '模型名称，关联dim_ai_model.model_name',
     item_type VARCHAR(20) NOT NULL COMMENT '配置项类型：header-请求头配置，param-请求体参数配置',
-    item_key VARCHAR(255) NOT NULL COMMENT '业务入参的key名称',
+    key VARCHAR(255) NOT NULL COMMENT '业务入参的key名称',
     category VARCHAR(50) NOT NULL COMMENT '处理类型：key、map、list',
     node VARCHAR(500) NOT NULL COMMENT '目标路径，支持点号和数组索引，如content[0].text',
     post_param VARCHAR(255) COMMENT '写入的目标字段名，为空则取node尾段',
@@ -44,7 +42,7 @@ CREATE TABLE dim_ai_model_item (
     INDEX idx_sort (model_name, item_type, sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI模型配置项明细表';
 
--- 4. 如果需要迁移旧数据，可以执行以下SQL（根据实际业务需求调整）
+-- 3. 如果需要迁移旧数据，可以执行以下SQL（根据实际业务需求调整）
 -- 注意：需要将旧表中的 header_item 和 param_item JSON 数据解析后插入到 dim_ai_model_item 表
 -- INSERT INTO dim_ai_model (
 --     model_name, origin_name, base_url, point, authorization,

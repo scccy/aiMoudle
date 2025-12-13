@@ -1,14 +1,14 @@
 package com.origin.aimodel.util.spel.demo;
 
 import com.origin.aimodel.domain.vo.AiTaskQuery;
-import com.origin.aimodel.util.spel.SpelDsl;
-import com.origin.aimodel.util.spel.SpelDslConfig;
+import com.origin.aimodel.util.spel.PostDsl;
+import com.origin.aimodel.util.spel.PostDslConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
  * SpEL 配置示例，仅包含配置项字符串，不做任何解析逻辑。
- * 具体解析/预览逻辑委托给 {@link SpelDsl}。
+ * 具体解析/预览逻辑委托给 {@link PostDsl}。
  */
 @Slf4j
 @Service
@@ -98,8 +98,8 @@ public final class SpelDemo {
             }
             """;
 
-    private static final SpelDslConfig CONFIG =
-            new SpelDslConfig(BASE_INFO, TEXT_GENERATION_HEADER_ITEM, TEXT_GENERATION_PARAM_ITEM);
+    private static final PostDslConfig CONFIG =
+            new PostDslConfig(BASE_INFO, TEXT_GENERATION_HEADER_ITEM, TEXT_GENERATION_PARAM_ITEM);
 
     public void taskStart(AiTaskQuery aiTaskQuery) {
         java.util.LinkedHashMap<String, Object> payload = new java.util.LinkedHashMap<>();
@@ -110,11 +110,11 @@ public final class SpelDemo {
             payload.put("model", aiTaskQuery.getModelName());
         }
 
-        SpelDsl.Runner runner = SpelDsl.Runner(CONFIG, payload);
+        PostDsl.Builder builder = PostDsl.build(CONFIG, payload);
 
-        String headerPreview = runner.headerPreview();
-        String paramPreview = runner.paramPreview();
-        String urlPreview = runner.urlPreview();
+        String headerPreview = builder.getHeader();
+        String paramPreview = builder.getParam();
+        String urlPreview = builder.getUrl();
 
         log.info("header preview:\n{}", headerPreview);
         log.info("param preview:\n{}", paramPreview);

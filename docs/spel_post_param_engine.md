@@ -1,8 +1,10 @@
-# SpEL 模板解析引擎使用指南
+# 配置 DSL 参数映射引擎使用指南
 
 ## 概述
 
-SpEL 模板解析引擎（`SpelDsl`）是一个配置驱动的参数映射工具，用于将业务入参映射为实际 HTTP 请求的 header、body 和 URL。通过简单的 JSON 配置即可完成复杂的参数转换，支持嵌套结构、列表处理、模板拼接等功能。
+配置 DSL 参数映射引擎（`PostDsl`）是一个配置驱动的参数映射工具，用于将业务入参映射为实际 HTTP 请求的 header、body 和 URL。通过简单的 JSON 配置即可完成复杂的参数转换，支持嵌套结构、列表处理、字符串模板拼接等功能。
+
+**注意：** 本工具使用字符串模板替换（`{value}`），并非 Spring Expression Language (SpEL)，命名中的 "spel" 仅为历史遗留。
 
 **核心概念：**
 - `baseInfo`：基础配置（模型信息、鉴权、URL 等），通常来自数据库
@@ -14,27 +16,27 @@ SpEL 模板解析引擎（`SpelDsl`）是一个配置驱动的参数映射工具
 ### 1. 创建配置对象
 
 ```java
-SpelDslConfig config = new SpelDslConfig(baseInfoJson, headerItemJson, paramItemJson);
+PostDslConfig config = new PostDslConfig(baseInfoJson, headerItemJson, paramItemJson);
 ```
 
-### 2. 使用 Runner 方式（推荐）
+### 2. 使用 Builder 模式（推荐）
 
 ```java
 Map<String, Object> payload = new HashMap<>();
 payload.put("prompt", "hello world");
 
-SpelDsl.Runner runner = SpelDsl.Runner(config, payload);
-String header = runner.headerPreviewNew();  // 生成请求头预览
-String body = runner.paramPreviewNew();      // 生成请求体预览
-String url = runner.urlPreviewNew();         // 生成 URL 预览
+PostDsl.Builder builder = PostDsl.build(config, payload);
+String header = builder.getHeader();  // 生成请求头预览
+String body = builder.getParam();     // 生成请求体预览
+String url = builder.getUrl();        // 生成 URL 预览
 ```
 
 ### 3. 静态方法调用
 
 ```java
-String header = SpelDsl.getHeaderPreviewNew(config, payload);
-String body = SpelDsl.getParamPreviewNew(config, payload);
-String url = SpelDsl.getUrlPreviewNew(config, payload);
+String header = PostDsl.getHeaderPreviewNew(config, payload);
+String body = PostDsl.getParamPreviewNew(config, payload);
+String url = PostDsl.getUrlPreviewNew(config, payload);
 ```
 
 ## paramItem 配置说明
@@ -49,7 +51,7 @@ String url = SpelDsl.getUrlPreviewNew(config, payload);
 | `category` | 是 | 处理类型：`key`、`map`、`list` | `"key"` |
 | `node` | 是 | 目标路径，支持点号和数组索引 | `"content[0].text"` |
 | `post_param` | 否 | 写入的目标字段名，为空则取 node 尾段 | `"text"` |
-| `spel_temp` | 否 | 模板字符串，`{value}` 会被替换为实际值 | `" --ratio {value}"` |
+| `spel_temp` | 否 | 字符串模板，`{value}` 会被替换为实际值（注意：非 SpEL 表达式） | `" --ratio {value}"` |
 | `default_value` | 否 | 缺省值，当入参不存在时使用 | `"text"` |
 | `value_object` | 否 | 类型提示：`string`、`int`、`double`、`list<string>`、`list<json>`、`map` | `"string"` |
 
@@ -61,12 +63,12 @@ String url = SpelDsl.getUrlPreviewNew(config, payload);
 
 **配置：**
 ```json
-{
-  "key": "prompt",
-  "category": "key",
-  "node": "prompt",
-  "post_param": "prompt",
-  "value_object": "string"
+  {
+    "key": "prompt",
+    "category": "key",
+    "node": "prompt",
+    "post_param": "prompt",
+    "value_object": "string"
 }
 ```
 
@@ -81,12 +83,12 @@ String url = SpelDsl.getUrlPreviewNew(config, payload);
 
 **配置：**
 ```json
-{
-  "key": "type",
-  "category": "key",
-  "node": "camera_control.type",
-  "post_param": "type",
-  "value_object": "string"
+  {
+    "key": "type",
+    "category": "key",
+    "node": "camera_control.type",
+    "post_param": "type",
+    "value_object": "string"
 }
 ```
 
@@ -237,6 +239,38 @@ payload.put("image_list", imageList);
 }
 ```
 
+## 反向解析功能
+
+`ReverseDsl` 提供了反向解析功能，可以从实际请求的 header/body + 映射关系生成 `headerItem` 和 `paramItem` 配置。
+
+### 使用示例
+
+```java
+// 准备实际请求数据
+JSONObject requestBody = new JSONObject();
+requestBody.put("model", "doubao-seedance-1-0-pro-250428");
+// ... 其他字段
+
+Map<String, String> requestHeaders = new HashMap<>();
+requestHeaders.put("Content-Type", "application/json");
+requestHeaders.put("Authorization", "Bearer token123");
+
+// 准备映射关系配置
+JSONObject mappingConfig = new JSONObject();
+JSONArray paramMappingArray = new JSONArray();
+// ... 添加映射关系
+mappingConfig.put("paramItem", paramMappingArray);
+
+// 反向解析：生成 paramItem 配置
+ReverseDsl.Builder reverseBuilder = ReverseDsl.build(requestBody, mappingConfig);
+JSONObject generatedParamItem = reverseBuilder.getParam();
+
+// 反向解析：生成 headerItem 配置（需要先设置 headers）
+ReverseDsl.Builder headerBuilder = ReverseDsl.build(requestBody, headerMappingConfig)
+        .withHeaders(requestHeaders);
+JSONObject generatedHeaderItem = headerBuilder.getHeader();
+```
+
 ## 处理逻辑要点
 
 1. **合并策略：** baseInfo → payload，外部 payload 覆盖 baseInfo
@@ -254,6 +288,25 @@ payload.put("image_list", imageList);
 4. **转义字符：** `spel_temp` 中的 JSON 字符串需要正确转义（`\"`）
 5. **路径索引：** 数组索引从 0 开始，如 `content[0]` 表示第一个元素
 6. **嵌套 paramItem：** `node` 路径写相对路径即可，无需包含父级路径
+
+## API 参考
+
+### PostDsl
+
+**主要方法：**
+- `PostDsl.build(config, payload)` - 创建构建器
+- `builder.getHeader()` - 获取请求头预览
+- `builder.getParam()` - 获取请求体预览
+- `builder.getUrl()` - 获取 URL 预览
+- `builder.validate()` - 校验 payload
+
+### ReverseDsl
+
+**主要方法：**
+- `ReverseDsl.build(requestBody, mappingConfig)` - 创建构建器
+- `builder.withHeaders(headers)` - 设置请求头（可选）
+- `builder.getParam()` - 获取 paramItem 配置对象
+- `builder.getHeader()` - 获取 headerItem 配置对象（需要先调用 `withHeaders()`）
 
 ## 完整示例
 

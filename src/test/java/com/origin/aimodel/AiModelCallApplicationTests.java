@@ -3,7 +3,8 @@ package com.origin.aimodel;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.origin.aimodel.domain.vo.AiTaskQuery;
-import com.origin.aimodel.util.spel.SpelDsl;
+import com.origin.aimodel.util.spel.PostDsl;
+import com.origin.aimodel.util.spel.ReverseDsl;
 import com.origin.aimodel.util.spel.demo.SpelDemo;
 import com.origin.aimodel.util.spel.demo.SpelDemoNew;
 import com.origin.aimodel.util.spel.demo.SpelDemoThreeNew;
@@ -138,11 +139,25 @@ class AiModelCallApplicationTests {
         spelDemoThreeNew.taskStart(query);
     }
 
+    /**
+     * 测试反向DSL解析功能
+     * 
+     * 该测试方法演示了如何使用ReverseDsl工具从实际的HTTP请求（包括body和header）
+     * 反向生成paramItem和headerItem配置。这在需要根据已有的API请求示例自动生成
+     * DSL配置时非常有用。
+     * 
+     * 测试流程：
+     * 1. 构造一个模拟的实际请求（包括body和header）
+     * 2. 定义paramItem和headerItem的映射关系配置
+     * 3. 使用ReverseDsl工具进行反向解析，生成对应的配置项
+     * 4. 输出结果以供验证
+     */
     @Test
     void c() {
         // 模拟实际请求的 JSON body
         JSONObject requestBody = new JSONObject();
         requestBody.put("model", "doubao-seedance-1-0-pro-250528");
+        requestBody.put("temperature", 0.8);  // 添加数值字段用于 range 校验示例
         
         // 构建 content 数组
         List<JSONObject> contentList = new ArrayList<>();
@@ -158,24 +173,43 @@ class AiModelCallApplicationTests {
         requestHeaders.put("Authorization", "Bearer $ARK_API_KEY");
 
         // paramItem 映射关系配置：定义业务字段名到实际请求字段的映射
+        // 反向解析会自动从请求 body 中发现 node 路径，只需要提供 key 和 post_param（目标字段名）
+        // 可选的 validate 字段可以包含校验规则（参考 ConfigParser 和 ConfigValidator）
         JSONObject mappingModel = new JSONObject();
         mappingModel.put("key", "model");
-        mappingModel.put("post_param", "model");  // 实际请求中的字段路径
+        mappingModel.put("post_param", "model");  // 目标字段名，工具会自动发现 node 路径
+        
+        // 添加 validate 字段示例：数字区间校验
+        JSONObject mappingTemperature = new JSONObject();
+        mappingTemperature.put("key", "temperature");
+        mappingTemperature.put("post_param", "temperature");  // 目标字段名，工具会自动发现 node 路径
+        JSONObject temperatureValidate = new JSONObject();
+        temperatureValidate.put("range", new com.alibaba.fastjson2.JSONArray().fluentAdd(0.0).fluentAdd(2.0));
+        mappingTemperature.put("validate", temperatureValidate.toJSONString());  // validate 是 JSON 字符串格式
         
         JSONObject mappingType = new JSONObject();
         mappingType.put("key", "content_type");
-        mappingType.put("post_param", "content[0].type");  // 实际请求中的字段路径
+        mappingType.put("post_param", "type");  // 目标字段名，工具会自动发现 node 为 content[0].type
+        // 添加 validate 字段示例：枚举值校验
+        JSONObject typeValidate = new JSONObject();
+        typeValidate.put("enum", new com.alibaba.fastjson2.JSONArray().fluentAdd("text").fluentAdd("image_url"));
+        mappingType.put("validate", typeValidate.toJSONString());  // validate 是 JSON 字符串格式
         
         JSONObject mappingRatio = new JSONObject();
         mappingRatio.put("key", "ratio");
-        mappingRatio.put("post_param", "content[0].text");  // 实际请求中的字段路径（需要从文本中提取）
+        mappingRatio.put("post_param", "text");  // 目标字段名，工具会自动发现 node 为 content[0].text
         
         JSONObject mappingPrompt = new JSONObject();
         mappingPrompt.put("key", "prompt");
-        mappingPrompt.put("post_param", "content[0].text");  // 实际请求中的字段路径
+        mappingPrompt.put("post_param", "text");  // 目标字段名，工具会自动发现 node 为 content[0].text
+        // 添加 validate 字段示例：最大长度校验
+        JSONObject promptValidate = new JSONObject();
+        promptValidate.put("maxLength", 2000);
+        mappingPrompt.put("validate", promptValidate.toJSONString());  // validate 是 JSON 字符串格式
 
         JSONArray paramMappingArray = new JSONArray();
         paramMappingArray.add(mappingModel);
+        paramMappingArray.add(mappingTemperature);  // 添加 temperature 映射配置（包含 range 校验）
         paramMappingArray.add(mappingType);
         paramMappingArray.add(mappingRatio);
         paramMappingArray.add(mappingPrompt);
@@ -183,13 +217,14 @@ class AiModelCallApplicationTests {
         paramMappingConfig.put("paramItem", paramMappingArray);
 
         // headerItem 映射关系配置
+        // 对于 header，node 就是 header 字段名，可以直接指定或使用 post_param
         JSONObject mappingContentType = new JSONObject();
         mappingContentType.put("key", "contentTypeHeader");
-        mappingContentType.put("post_param", "Content-Type");
+        mappingContentType.put("post_param", "Content-Type");  // header 字段名
         
         JSONObject mappingAuthorization = new JSONObject();
         mappingAuthorization.put("key", "authorization");
-        mappingAuthorization.put("post_param", "Authorization");
+        mappingAuthorization.put("post_param", "Authorization");  // header 字段名
 
         JSONArray headerMappingArray = new JSONArray();
         headerMappingArray.add(mappingContentType);
@@ -197,11 +232,14 @@ class AiModelCallApplicationTests {
         JSONObject headerMappingConfig = new JSONObject();
         headerMappingConfig.put("headerItem", headerMappingArray);
 
-        // 反向解析：从实际请求 body + 映射关系生成 paramItem 配置（使用门面模式）
-        JSONObject generatedParamItem = SpelDsl.getParamItemObject(requestBody, paramMappingConfig);
+        // 反向解析：从实际请求 body + 映射关系生成 paramItem 配置（使用 build 模式）
+        ReverseDsl.Builder reverseBuilder = ReverseDsl.build(requestBody, paramMappingConfig);
+        JSONObject generatedParamItem = reverseBuilder.getParam();
         
-        // 反向解析：从实际请求 header + 映射关系生成 headerItem 配置（使用门面模式）
-        JSONObject generatedHeaderItem = SpelDsl.getHeaderItemObject(requestHeaders, headerMappingConfig);
+        // 反向解析：从实际请求 header + 映射关系生成 headerItem 配置（使用 build 模式）
+        ReverseDsl.Builder headerBuilder = ReverseDsl.build(requestBody, headerMappingConfig)
+                .withHeaders(requestHeaders);
+        JSONObject generatedHeaderItem = headerBuilder.getHeader();
         
         // 打印结果
         System.out.println("========== 实际请求 body ==========");
