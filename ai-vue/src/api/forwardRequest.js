@@ -47,3 +47,21 @@ export const generateRequest = async (modelName, payload) => {
   }
 }
 
+/**
+ * 获取模型的基础请求参数（根据 item 配置自动生成）
+ */
+export const getModelBaseParams = async (modelName) => {
+  try {
+    const response = await api.get(`/ai-model/base-params/${modelName}`)
+    return response.data
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.message || '请求失败')
+    } else if (error.request) {
+      throw new Error('网络错误，请检查服务是否启动')
+    } else {
+      throw new Error(error.message || '请求失败')
+    }
+  }
+}
+

@@ -3,9 +3,6 @@
     <div class="card-title" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
       <span>生成的配置（可编辑）</span>
       <div>
-        <button class="btn btn-primary" style="padding: 5px 15px; font-size: 12px; margin-right: 10px;" @click="handleSave">
-          保存配置
-        </button>
         <button class="btn btn-success" style="padding: 5px 15px; font-size: 12px;" @click="handleConfirmSave" :disabled="saving">
           {{ saving ? '保存中...' : '确认保存到数据库' }}
         </button>
@@ -213,15 +210,6 @@ const removeItem = (type, index) => {
 }
 
 import { convertItemsToSaveFormat } from '../../utils/configItemHelper.js'
-
-// 保存配置
-const handleSave = () => {
-  const paramItems = convertItemsToSaveFormat(editableParamItems.value, true)
-  const headerItems = convertItemsToSaveFormat(editableHeaderItems.value, true)
-  
-  emit('save', { paramItems, headerItems })
-  alert('配置已保存！')
-}
 
 // 确认保存到数据库
 const handleConfirmSave = () => {

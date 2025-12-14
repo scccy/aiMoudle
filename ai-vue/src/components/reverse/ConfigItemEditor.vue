@@ -83,7 +83,8 @@
     </div>
     
     <!-- 当 value_object 不是 list<json> 时，显示 spel_temp 输入框 -->
-    <div v-if="item.valueObject !== 'list<json>' && !nested" style="margin-bottom: 8px;">
+    <!-- 嵌套模式下也需要显示 spel_temp，用于二级或三级配置 -->
+    <div v-if="item.valueObject !== 'list<json>'" style="margin-bottom: 8px;">
       <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">字符串模板 (spel_temp) <span style="color: #999; font-weight: normal;">可选</span></label>
       <input 
         :value="item.spelTemp"
@@ -151,6 +152,13 @@ const emit = defineEmits(['update:item'])
 
 // 使用本地状态控制 select 的值
 const localValueObject = ref(props.item.valueObject || 'string')
+
+// 监听整个 item prop 的变化，同步所有字段
+watch(() => props.item, (newItem) => {
+  if (newItem) {
+    localValueObject.value = newItem.valueObject || 'string'
+  }
+}, { deep: true, immediate: true })
 
 // 监听 props.item.valueObject 变化，同步到本地状态
 watch(() => props.item.valueObject, (newVal) => {

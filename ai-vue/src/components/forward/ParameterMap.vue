@@ -99,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import ParameterList from './ParameterList.vue'
 
 const props = defineProps({
@@ -134,18 +134,31 @@ const objectToProperties = (obj) => {
 
 const properties = ref(objectToProperties(props.value))
 
+// 用于跟踪是否正在内部更新，避免 watch 循环
+const isInternalUpdate = ref(false)
+
 const addProperty = () => {
   properties.value.push({ key: '', type: 'string', value: '' })
-  emitValue()
+  // 不立即 emitValue，等用户输入 key 后再 emit
+  // 这样可以避免 watch 清空刚添加的属性
 }
 
 const removeProperty = (index) => {
   properties.value.splice(index, 1)
+  isInternalUpdate.value = true
   emitValue()
+  nextTick(() => {
+    isInternalUpdate.value = false
+  })
 }
 
 const updateProperty = () => {
+  isInternalUpdate.value = true
   emitValue()
+  // 使用 nextTick 确保 emit 完成后再重置标志
+  nextTick(() => {
+    isInternalUpdate.value = false
+  })
 }
 
 const updatePropertyType = (index) => {
@@ -162,17 +175,29 @@ const updatePropertyType = (index) => {
   } else if (prop.type === 'map') {
     prop.value = {}
   }
+  isInternalUpdate.value = true
   emitValue()
+  nextTick(() => {
+    isInternalUpdate.value = false
+  })
 }
 
 const updateListProperty = (index, listValue) => {
   properties.value[index].value = listValue
+  isInternalUpdate.value = true
   emitValue()
+  nextTick(() => {
+    isInternalUpdate.value = false
+  })
 }
 
 const updateMapProperty = (index, mapValue) => {
   properties.value[index].value = mapValue
+  isInternalUpdate.value = true
   emitValue()
+  nextTick(() => {
+    isInternalUpdate.value = false
+  })
 }
 
 const emitValue = () => {
@@ -188,8 +213,29 @@ const emitValue = () => {
 
 // 监听外部 value 变化
 watch(() => props.value, (newVal) => {
+  // 如果是内部更新触发的，不重置 properties
+  if (isInternalUpdate.value) {
+    return
+  }
+  
   if (newVal && typeof newVal === 'object' && !Array.isArray(newVal)) {
-    properties.value = objectToProperties(newVal)
+    const newProperties = objectToProperties(newVal)
+    // 只有当新值和当前值不同时才更新
+    // 检查是否有新增的空属性（key 为空），如果有则保留
+    const hasEmptyKey = properties.value.some(prop => !prop.key || !prop.key.trim())
+    if (hasEmptyKey) {
+      // 如果有空 key 的属性，合并而不是替换
+      const existingEmptyProps = properties.value.filter(prop => !prop.key || !prop.key.trim())
+      properties.value = [...newProperties, ...existingEmptyProps]
+    } else {
+      properties.value = newProperties
+    }
+  } else if (!newVal || Object.keys(newVal || {}).length === 0) {
+    // 如果新值为空，检查是否有正在编辑的属性（key 为空），如果有则保留
+    const hasEmptyKey = properties.value.some(prop => !prop.key || !prop.key.trim())
+    if (!hasEmptyKey) {
+      properties.value = []
+    }
   }
 }, { deep: true })
 </script>

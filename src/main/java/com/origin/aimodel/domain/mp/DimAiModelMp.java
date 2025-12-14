@@ -1,15 +1,12 @@
 package com.origin.aimodel.domain.mp;
 
-import java.util.Date;
-import java.io.Serializable;
-
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.origin.aimodel.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
-import com.baomidou.mybatisplus.extension.activerecord.Model;
 
 import java.io.Serial;
 
@@ -20,10 +17,10 @@ import java.io.Serial;
  * @since 2025-12-13 14:48:33
  */
 @Data
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 @Accessors(chain = true)
 @TableName("dim_ai_model")
-public class DimAiModelMp extends Model<DimAiModelMp> implements Serializable {
+public class DimAiModelMp extends BaseEntity<DimAiModelMp> {
     @Serial
     private static final long serialVersionUID = 569819800017061585L;
 
@@ -57,35 +54,7 @@ public class DimAiModelMp extends Model<DimAiModelMp> implements Serializable {
     @TableField("authorization")
     private String authorization;
 
-    /**
-     * 创建人
-     */
-    @TableField("created_by")
-    private String createdBy;
 
-    /**
-     * 创建时间
-     */
-    @TableField("created_time")
-    private Date createdTime;
-
-    /**
-     * 更新人
-     */
-    @TableField("updated_by")
-    private String updatedBy;
-
-    /**
-     * 更新时间
-     */
-    @TableField("updated_time")
-    private Date updatedTime;
-
-    /**
-     * 删除标志：0-未删除，1-已删除
-     */
-    @TableField("del_flag")
-    private Integer delFlag;
 
 
 }

@@ -68,7 +68,7 @@ public class ReverseParser {
                         resultItem.validate = (String) validate;
                     } else if (validate instanceof JSONObject) {
                         resultItem.validate = ((JSONObject) validate).toJSONString();
-                    } else {
+                        } else {
                         resultItem.validate = validate.toString();
                     }
                 } else {
@@ -141,8 +141,8 @@ public class ReverseParser {
                 for (MappingItem item : baseItems) {
                     if (nodePath.equalsIgnoreCase(item.node)) {
                         matchedItem = item;
-                        break;
-                    }
+                            break;
+                        }
                 }
             }
             
@@ -164,7 +164,7 @@ public class ReverseParser {
                 resultItem.node = nodePath != null ? nodePath : key;
                 resultItem.postParam = nodePath != null ? nodePath : key;
                 resultItem.valueObject = "string";
-                
+        
                 // 从请求头中获取值作为默认值
                 if (requestHeaders != null && nodePath != null) {
                     String headerValue = requestHeaders.get(nodePath);
@@ -183,7 +183,7 @@ public class ReverseParser {
                 }
                 
                 resultItems.add(resultItem);
-            }
+                    }
         }
         
         return resultItems;
@@ -197,18 +197,18 @@ public class ReverseParser {
         for (MappingItem item : baseItems) {
             if (key != null && key.equals(item.key)) {
                 return item;
-            }
         }
-        
+    }
+    
         // 其次通过 node 匹配
         if (nodePath != null) {
             for (MappingItem item : baseItems) {
                 if (nodePath.equals(item.node)) {
                     return item;
-                }
-            }
         }
-        
+            }
+    }
+    
         // 最后通过 postParam 匹配
         if (postParam != null) {
             for (MappingItem item : baseItems) {

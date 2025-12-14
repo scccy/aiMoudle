@@ -80,7 +80,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
 		config.setWriterFeatures(
                 JSONWriter.Feature.PrettyFormat,
                 JSONWriter.Feature.WriteEnumsUsingName,
-				JSONWriter.Feature.WriteBigDecimalAsPlain
+				JSONWriter.Feature.WriteBigDecimalAsPlain,
+				JSONWriter.Feature.WriteLongAsString  // 将 Long 类型序列化为字符串，避免前端精度丢失
         );
 
         converter.setFastJsonConfig(config);

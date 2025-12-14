@@ -63,7 +63,6 @@
           :paramItems="result.paramItems"
           :headerItems="result.headerItems"
           :form-data="formData"
-          @save="handleSaveResult"
           @confirm-save="handleConfirmSave"
         />
       </div>
@@ -73,6 +72,11 @@
     <!-- 正向请求页面 -->
     <div v-if="currentPage === 'forward'" class="main-content" :style="{ marginLeft: '200px' }">
       <ForwardRequest />
+    </div>
+    
+    <!-- 字典查询页面 -->
+    <div v-if="currentPage === 'dictionary'" class="main-content" :style="{ marginLeft: '200px' }">
+      <DictionaryQuery />
     </div>
   </div>
 </template>
@@ -87,6 +91,7 @@ import ResultDisplay from './components/reverse/ResultDisplay.vue'
 import { generateConfig, saveConfig } from './api/reverseParse'
 import Sidebar from './components/layout/Sidebar.vue'
 import ForwardRequest from './components/forward/ForwardRequest.vue'
+import DictionaryQuery from './components/dictionary/DictionaryQuery.vue'
 
 const formData = reactive({
   modelName: '',
@@ -172,17 +177,6 @@ const handleReset = () => {
 
 const handlePageSwitch = (page) => {
   currentPage.value = page
-}
-
-const handleSaveResult = (savedData) => {
-  // 更新结果数据
-  if (result.value) {
-    result.value.paramItems = savedData.paramItems
-    result.value.headerItems = savedData.headerItems
-  }
-  
-  // 可以在这里添加保存到服务器或下载的逻辑
-  console.log('保存的配置:', savedData)
 }
 
 const handleConfirmSave = async (savedConfigItems) => {

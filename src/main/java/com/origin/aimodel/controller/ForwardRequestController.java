@@ -43,4 +43,23 @@ public class ForwardRequestController {
             return ResultData.fail("生成请求失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 获取模型的基础请求参数（根据 item 配置自动生成）
+     *
+     * @param modelName 模型名称
+     * @return 基础请求参数对象
+     */
+    @GetMapping("/base-params/{modelName}")
+    public ResultData<?> getModelBaseParams(@PathVariable String modelName) {
+        try {
+            return ResultData.ok(forwardRequestService.getModelBaseParams(modelName));
+        } catch (IllegalArgumentException e) {
+            log.warn("获取模型基础参数失败: {}", e.getMessage());
+            return ResultData.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("获取模型基础参数异常", e);
+            return ResultData.fail("获取基础参数失败: " + e.getMessage());
+        }
+    }
 }

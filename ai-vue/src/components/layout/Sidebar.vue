@@ -20,6 +20,14 @@
         <span class="menu-icon">➡️</span>
         <span class="menu-text">正向请求</span>
       </div>
+      <div 
+        class="menu-item" 
+        :class="{ active: currentPage === 'dictionary' }"
+        @click="switchPage('dictionary')"
+      >
+        <span class="menu-icon">📚</span>
+        <span class="menu-text">字典查询</span>
+      </div>
     </div>
   </div>
 </template>
@@ -97,4 +105,3 @@ const switchPage = (page) => {
   font-size: 14px;
 }
 </style>
-

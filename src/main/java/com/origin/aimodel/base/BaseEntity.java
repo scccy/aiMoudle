@@ -3,9 +3,10 @@ package com.origin.aimodel.base;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 
 import lombok.Data;
-
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -24,7 +25,8 @@ import java.time.LocalDateTime;
  * @since 2025-07-31
  */
 @Data
-public abstract class BaseEntity implements Serializable {
+@EqualsAndHashCode(callSuper = false)
+public abstract class BaseEntity<T extends BaseEntity<T>> extends Model<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 

@@ -2,25 +2,22 @@ package com.origin.aimodel.service.impl;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.origin.aimodel.dao.mapper.DimAiModelItemMapper;
 import com.origin.aimodel.dao.service.DimAiModelItemMpService;
 import com.origin.aimodel.dao.service.DimAiModelMpService;
 import com.origin.aimodel.domain.mp.DimAiModelItemMp;
 import com.origin.aimodel.domain.mp.DimAiModelMp;
-import com.origin.aimodel.domain.vo.ForwardRequestResult;
 import com.origin.aimodel.domain.vo.ReverseParseRequest;
 import com.origin.aimodel.domain.vo.ReverseParseResponse;
 import com.origin.aimodel.service.ReverseParseService;
 import com.origin.aimodel.util.spel.MappingItem;
-import com.origin.aimodel.util.spel.ReverseDslFactory;
 import com.origin.aimodel.util.spel.ReverseDsl;
+import com.origin.aimodel.util.spel.ReverseDslFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -33,12 +30,15 @@ public class ReverseParseServiceImpl implements ReverseParseService {
 
     private final DimAiModelMpService dimAiModelMpService;
     private final DimAiModelItemMpService dimAiModelItemMpService;
+    private final DimAiModelItemMapper dimAiModelItemMapper;
 
     @Autowired
     public ReverseParseServiceImpl(DimAiModelMpService dimAiModelMpService,
-                                   DimAiModelItemMpService dimAiModelItemMpService) {
+                                   DimAiModelItemMpService dimAiModelItemMpService,
+                                   DimAiModelItemMapper dimAiModelItemMapper) {
         this.dimAiModelMpService = dimAiModelMpService;
         this.dimAiModelItemMpService = dimAiModelItemMpService;
+        this.dimAiModelItemMapper = dimAiModelItemMapper;
     }
 
     @Override
@@ -91,20 +91,19 @@ public class ReverseParseServiceImpl implements ReverseParseService {
             model.setBaseUrl(request.getBaseUrl());
             model.setPoint(request.getPoint());
             model.setAuthorization(request.getAuthorization());
-            model.setUpdatedTime(new Date());
+
 
             DimAiModelMp existingModel = dimAiModelMpService.getById(request.getModelName());
             if (existingModel != null) {
                 dimAiModelMpService.updateById(model);
             } else {
-                model.setCreatedTime(new Date());
-                model.setDelFlag(0);
                 dimAiModelMpService.save(model);
             }
 
-            QueryWrapper<DimAiModelItemMp> removeWrapper = new QueryWrapper<>();
-            removeWrapper.eq("model_name", request.getModelName());
-            dimAiModelItemMpService.remove(removeWrapper);
+            // 物理删除该模型下的所有旧配置项（只保留新的结构）
+            // 使用自定义 SQL 执行物理删除，绕过逻辑删除
+            int deletedCount = dimAiModelItemMapper.physicalDeleteByModelName(request.getModelName());
+            log.info("物理删除模型 {} 的旧配置项，共删除 {} 条记录", request.getModelName(), deletedCount);
 
             saveConfigItems(request, "param");
             saveConfigItems(request, "header");
@@ -140,9 +139,8 @@ public class ReverseParseServiceImpl implements ReverseParseService {
             item.setValueObject(configItem.getValueObject() != null ? configItem.getValueObject() : "string");
             item.setValidate(configItem.getValidate());
             item.setSortOrder(i);
-            item.setCreatedTime(new Date());
-            item.setDelFlag(0);
             dimAiModelItemMpService.save(item);
+            // 字典映射直接使用 item 表，不需要单独保存
         }
     }
 

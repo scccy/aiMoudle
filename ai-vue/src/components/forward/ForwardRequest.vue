@@ -50,7 +50,7 @@ import { ref } from 'vue'
 import ModelSelector from './ModelSelector.vue'
 import ParameterForm from './ParameterForm.vue'
 import RequestResult from './RequestResult.vue'
-import { generateRequest as generateRequestApi } from '../../api/forwardRequest.js'
+import { generateRequest as generateRequestApi, getModelBaseParams } from '../../api/forwardRequest.js'
 
 const selectedModel = ref('')
 const payload = ref({})
@@ -59,9 +59,34 @@ const loading = ref(false)
 const error = ref('')
 
 // 处理模型变化
-const handleModelChange = (modelName) => {
-  // 可以在这里加载模型配置，预填充一些默认参数
+const handleModelChange = async (modelName) => {
   console.log('模型已选择:', modelName)
+  
+  if (!modelName) {
+    payload.value = {}
+    return
+  }
+  
+  // 从后端获取已生成的基础请求参数
+  try {
+    loading.value = true
+    error.value = ''
+    const response = await getModelBaseParams(modelName)
+    
+    if (response.code === 200 && response.data) {
+      payload.value = response.data || {}
+      console.log('已加载基础请求参数:', payload.value)
+    } else {
+      // 如果没有配置，清空参数
+      payload.value = {}
+    }
+  } catch (err) {
+    console.error('加载模型基础参数失败:', err)
+    error.value = '加载模型基础参数失败: ' + (err.message || '未知错误')
+    payload.value = {}
+  } finally {
+    loading.value = false
+  }
 }
 
 // 生成请求
