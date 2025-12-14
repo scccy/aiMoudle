@@ -33,6 +33,14 @@
             <option value="map">对象</option>
           </select>
           <button 
+            class="btn btn-success" 
+            style="padding: 6px 12px; font-size: 12px; margin-right: 8px;"
+            @click="duplicateProperty(index)"
+            title="添加相同组"
+          >
+            + 相同组
+          </button>
+          <button 
             class="btn btn-danger" 
             style="padding: 6px 12px; font-size: 12px;"
             @click="removeProperty(index)"
@@ -145,6 +153,31 @@ const addProperty = () => {
 
 const removeProperty = (index) => {
   properties.value.splice(index, 1)
+  isInternalUpdate.value = true
+  emitValue()
+  nextTick(() => {
+    isInternalUpdate.value = false
+  })
+}
+
+const duplicateProperty = (index) => {
+  const prop = properties.value[index]
+  // 深拷贝属性值
+  let duplicatedValue
+  if (prop.type === 'list' && Array.isArray(prop.value)) {
+    duplicatedValue = JSON.parse(JSON.stringify(prop.value))
+  } else if (prop.type === 'map' && typeof prop.value === 'object' && prop.value !== null) {
+    duplicatedValue = JSON.parse(JSON.stringify(prop.value))
+  } else {
+    duplicatedValue = prop.value
+  }
+  
+  // 在当前位置后插入复制的属性
+  properties.value.splice(index + 1, 0, {
+    key: prop.key,
+    type: prop.type,
+    value: duplicatedValue
+  })
   isInternalUpdate.value = true
   emitValue()
   nextTick(() => {

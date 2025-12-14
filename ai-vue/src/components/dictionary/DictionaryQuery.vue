@@ -25,12 +25,12 @@
             </datalist>
           </div>
           <div class="form-row">
-            <label>Key:</label>
+            <label>统一字段:</label>
             <input 
               v-model="searchForm.key" 
               type="text"
               list="key-list"
-              placeholder="请输入或选择 Key"
+              placeholder="请输入或选择统一字段"
               class="form-input"
             />
             <datalist id="key-list">
@@ -40,12 +40,12 @@
             </datalist>
           </div>
           <div class="form-row">
-            <label>Post Param:</label>
+            <label>目标字段:</label>
             <input 
               v-model="searchForm.postParam" 
               type="text"
               list="postParam-list"
-              placeholder="请输入或选择 Post Param"
+              placeholder="请输入或选择目标字段"
               class="form-input"
             />
             <datalist id="postParam-list">
@@ -88,10 +88,9 @@
               <thead>
                 <tr>
                   <th>模型名称</th>
-                  <th>Key</th>
-                  <th>Post Param</th>
-                  <th>说明</th>
-                  <th>Item ID</th>
+                  <th>统一字段</th>
+                  <th>目标字段</th>
+                  <th>节点</th>
                   <th>操作</th>
                 </tr>
               </thead>
@@ -106,7 +105,6 @@
                   <td>{{ item.key || '-' }}</td>
                   <td>{{ item.postParam || '-' }}</td>
                   <td>{{ item.description || '-' }}</td>
-                  <td>{{ item.itemId || '-' }}</td>
                   <td>
                     <button 
                       class="btn btn-sm btn-info" 

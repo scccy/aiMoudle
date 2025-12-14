@@ -13,6 +13,7 @@
           @update:type="(type) => updateParamType(index, type)"
           @update:value="(value) => updateParamValue(index, value)"
           @remove="removeParameter(index)"
+          @duplicate="duplicateParameter(index)"
         />
       </div>
       
@@ -96,6 +97,28 @@ const addParameter = () => {
 
 const removeParameter = (index) => {
   parameters.value.splice(index, 1)
+  emitValue()
+}
+
+const duplicateParameter = (index) => {
+  const param = parameters.value[index]
+  // 深拷贝参数值
+  let duplicatedValue
+  if (param.type === 'list' && Array.isArray(param.value)) {
+    duplicatedValue = JSON.parse(JSON.stringify(param.value))
+  } else if (param.type === 'map' && typeof param.value === 'object') {
+    duplicatedValue = JSON.parse(JSON.stringify(param.value))
+  } else {
+    duplicatedValue = param.value
+  }
+  
+  // 在当前位置后插入复制的参数
+  parameters.value.splice(index + 1, 0, {
+    id: paramIdCounter++,
+    key: param.key,
+    type: param.type,
+    value: duplicatedValue
+  })
   emitValue()
 }
 

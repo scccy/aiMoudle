@@ -2,8 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.origin.aimodel.dao.mapper.DimAiModelItemMapper">
-    <resultMap id="BaseResultMap" type="com.origin.aimodel.domain.mp.DimAiModelItemMp">
+<mapper namespace="com.scccy.aimodel.dao.mapper.DimAiModelItemMapper">
+    <resultMap id="BaseResultMap" type="com.scccy.aimodel.domain.mp.DimAiModelItemMp">
         <!--@mbg.generated-->
         <!--@Table dim_ai_model_item-->
         <result column="id" jdbcType="INTEGER" property="id"/>

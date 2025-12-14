@@ -36,6 +36,15 @@
           </div>
           <div style="display: flex; gap: 8px;">
             <button 
+              v-if="item.type === 'map'"
+              class="btn btn-success" 
+              style="padding: 6px 12px; font-size: 12px;"
+              @click="duplicateItem(index)"
+              title="添加相同组"
+            >
+              + 相同组
+            </button>
+            <button 
               class="btn btn-danger" 
               style="padding: 6px 12px; font-size: 12px;"
               @click="removeItem(index)"
@@ -181,6 +190,24 @@ const createEmptyObjectFromTemplate = (template) => {
 
 const removeItem = (index) => {
   localValue.value.splice(index, 1)
+  emitValue()
+}
+
+const duplicateItem = (index) => {
+  const item = localValue.value[index]
+  // 深拷贝项值
+  let duplicatedValue
+  if (item.type === 'map' && typeof item.value === 'object' && item.value !== null) {
+    duplicatedValue = JSON.parse(JSON.stringify(item.value))
+  } else {
+    duplicatedValue = item.value
+  }
+  
+  // 在当前位置后插入复制的项
+  localValue.value.splice(index + 1, 0, {
+    type: item.type,
+    value: duplicatedValue
+  })
   emitValue()
 }
 

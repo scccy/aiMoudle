@@ -58,6 +58,56 @@ const requestResult = ref(null)
 const loading = ref(false)
 const error = ref('')
 
+// 转换后端返回的特殊格式为标准格式
+// xxx[] -> [] (数组)
+// map{1} 或 map{*} -> {} (对象)
+const transformBaseParams = (data) => {
+  if (!data || typeof data !== 'object') {
+    return data
+  }
+  
+  const result = {}
+  
+  for (const [key, value] of Object.entries(data)) {
+    // 检查是否是数组格式 xxx[]
+    if (key.endsWith('[]')) {
+      const arrayKey = key.slice(0, -2) // 移除 []
+      
+      // 如果值是对象，需要处理 map{1} 或 map{*}
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const arrayValue = []
+        
+        // 遍历对象的所有键
+        for (const [mapKey, mapValue] of Object.entries(value)) {
+          // 检查是否是 map{1} 或 map{*} 格式
+          if (mapKey.startsWith('map{') && mapKey.endsWith('}')) {
+            // 提取 map 中的值（递归转换）
+            const transformedValue = transformBaseParams(mapValue)
+            arrayValue.push(transformedValue)
+          } else {
+            // 如果不是 map{} 格式，直接添加（递归转换）
+            const transformedValue = transformBaseParams(mapValue)
+            arrayValue.push(transformedValue)
+          }
+        }
+        
+        result[arrayKey] = arrayValue
+      } else if (Array.isArray(value)) {
+        // 如果已经是数组，递归转换每个元素
+        result[arrayKey] = value.map(item => transformBaseParams(item))
+      } else {
+        // 其他情况，直接转换
+        result[arrayKey] = transformBaseParams(value)
+      }
+    } else {
+      // 普通键，递归转换值
+      result[key] = transformBaseParams(value)
+    }
+  }
+  
+  return result
+}
+
 // 处理模型变化
 const handleModelChange = async (modelName) => {
   console.log('模型已选择:', modelName)
@@ -74,8 +124,11 @@ const handleModelChange = async (modelName) => {
     const response = await getModelBaseParams(modelName)
     
     if (response.code === 200 && response.data) {
-      payload.value = response.data || {}
-      console.log('已加载基础请求参数:', payload.value)
+      // 转换特殊格式为标准格式
+      const transformedData = transformBaseParams(response.data)
+      payload.value = transformedData || {}
+      console.log('原始数据:', response.data)
+      console.log('转换后的数据:', payload.value)
     } else {
       // 如果没有配置，清空参数
       payload.value = {}

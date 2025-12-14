@@ -11,21 +11,6 @@
         />
       </div>
       <div>
-        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">处理类型 (category)</label>
-        <select 
-          :value="item.category || 'key'"
-          @change="updateField('category', $event.target.value)"
-          style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; background: white;"
-        >
-          <option value="key">key - 普通字段</option>
-          <option value="map">map - 对象</option>
-          <option value="list">list - 列表</option>
-        </select>
-      </div>
-    </div>
-    
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
-      <div>
         <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">目标路径 (node)</label>
         <input 
           :value="item.node"
@@ -34,6 +19,9 @@
           style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
         />
       </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
       <div>
         <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">目标字段名 (post_param)</label>
         <input 
@@ -43,9 +31,6 @@
           style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
         />
       </div>
-    </div>
-    
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
       <div>
         <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">类型 (value_object)</label>
         <select 
@@ -71,38 +56,28 @@
           <option :value="'list<json>'">📦 对象列表 (list&lt;json&gt;) - 多个对象，示例: [{"type": "text"}, {"url": "..."}]</option>
         </select>
       </div>
-      <div>
-        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">默认值 (default_value)</label>
-        <input 
-          :value="item.defaultValue"
-          @input="updateField('defaultValue', $event.target.value)"
-          :placeholder="defaultValuePlaceholder"
-          style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
-        />
-      </div>
     </div>
     
-    <!-- 当 value_object 不是 list<json> 时，显示 spel_temp 输入框 -->
-    <!-- 嵌套模式下也需要显示 spel_temp，用于二级或三级配置 -->
+    <div style="margin-bottom: 8px;">
+      <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">默认值 (default_value)</label>
+      <input 
+        :value="item.defaultValue"
+        @input="updateField('defaultValue', $event.target.value)"
+        :placeholder="defaultValuePlaceholder"
+        style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
+      />
+    </div>
+    
+    <!-- 字符串模板 (spel_temp) - 用于特殊情况，如 --xxx {value} -->
     <div v-if="item.valueObject !== 'list<json>'" style="margin-bottom: 8px;">
       <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">字符串模板 (spel_temp) <span style="color: #999; font-weight: normal;">可选</span></label>
       <input 
         :value="item.spelTemp"
         @input="updateField('spelTemp', $event.target.value)"
-        placeholder="例如: Bearer {value} 或  --ratio {value}"
+        placeholder="例如: Bearer {value} 或 --ratio {value}"
         style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
       />
     </div>
-    
-    <!-- 当 value_object 是 list<json> 时，显示嵌套配置编辑器 -->
-    <NestedItemEditor
-      v-if="item.valueObject === 'list<json>'"
-      :spel-temp="item.spelTemp || ''"
-      :show="item.valueObject === 'list<json>'"
-      :node="item.node"
-      :request-body="requestBody"
-      @update:spel-temp="(val) => updateField('spelTemp', val)"
-    />
     
     <!-- 校验规则编辑器 -->
     <ValidateRuleEditor 
@@ -115,7 +90,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import ValidateRuleEditor from './ValidateRuleEditor.vue'
-import NestedItemEditor from './NestedItemEditor.vue'
 
 const props = defineProps({
   item: {
@@ -174,27 +148,29 @@ const getValidateString = (validate) => {
 
 // 更新字段
 const updateField = (field, value) => {
-  const updatedItem = { ...props.item, [field]: value }
+  // 构建更新后的项
+  const updatedItem = { 
+    ...props.item, 
+    [field]: value
+  }
+  
+  // 确保 category 字段被保留（如果字段不是 category）
+  if (field !== 'category') {
+    updatedItem.category = props.item.category || 'key'
+  }
+  
+  // 确保 spelTemp 字段被保留（如果字段不是 spelTemp）
+  if (field !== 'spelTemp') {
+    updatedItem.spelTemp = props.item.spelTemp || ''
+  }
+  
   emit('update:item', updatedItem)
 }
 
 // 处理 value_object 变化
 const handleValueObjectChange = () => {
   const newValue = localValueObject.value
-  const oldValue = props.item.valueObject
-  
-  // 如果从 list<json> 切换到其他类型，提示用户
-  if (oldValue === 'list<json>' && newValue !== 'list<json>') {
-    if (confirm('切换类型将清空嵌套配置，是否继续？')) {
-      const updatedItem = { ...props.item, valueObject: newValue, spelTemp: '' }
-      emit('update:item', updatedItem)
-    } else {
-      // 用户取消，恢复原值
-      localValueObject.value = oldValue
-    }
-  } else {
-    updateField('valueObject', newValue)
-  }
+  updateField('valueObject', newValue)
 }
 </script>
 

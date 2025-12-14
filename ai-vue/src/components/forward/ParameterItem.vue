@@ -1,17 +1,27 @@
 <template>
   <div class="parameter-item">
     <div class="parameter-item-header">
-      <input
-        v-model="localKey"
-        @input="updateKey"
-        placeholder="参数名"
-        class="param-key-input"
-        style="flex: 1; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; margin-right: 8px;"
-      />
+      <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+        <button
+          v-if="localType === 'list' || localType === 'map'"
+          class="collapse-btn"
+          @click="toggleCollapse"
+          :title="isCollapsed ? '展开' : '收起'"
+        >
+          <span class="collapse-icon" :class="{ collapsed: isCollapsed }">▼</span>
+        </button>
+        <input
+          v-model="localKey"
+          @input="updateKey"
+          placeholder="参数名"
+          class="param-key-input"
+          style="flex: 1; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
+        />
+      </div>
       <select
         v-model="localType"
         @change="handleTypeChange"
-        style="width: 120px; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; margin-right: 8px;"
+        style="width: 120px; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; margin-right: 8px; margin-left: 8px;"
       >
         <option value="string">字符串</option>
         <option value="number">数字</option>
@@ -19,6 +29,15 @@
         <option value="list">列表</option>
         <option value="map">对象</option>
       </select>
+      <button 
+        v-if="localType === 'list' || localType === 'map'"
+        class="btn btn-success" 
+        style="padding: 8px 12px; font-size: 12px; margin-right: 8px;"
+        @click="$emit('duplicate')"
+        title="添加相同组"
+      >
+        + 相同组
+      </button>
       <button 
         class="btn btn-danger" 
         style="padding: 8px 12px; font-size: 12px;"
@@ -28,7 +47,7 @@
       </button>
     </div>
     
-    <div class="parameter-item-body">
+    <div v-show="!isCollapsed" class="parameter-item-body">
       <!-- 字符串类型 -->
       <div v-if="localType === 'string'" class="param-value-input">
         <textarea
@@ -102,15 +121,20 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:key', 'update:type', 'update:value', 'remove'])
+const emit = defineEmits(['update:key', 'update:type', 'update:value', 'remove', 'duplicate'])
 
 const localKey = ref(props.keyProp)
-const localType = ref(props.type)
+const localType = ref(props.type || 'string')
 const stringValue = ref(props.type === 'string' ? (props.value || '') : '')
 const numberValue = ref(props.type === 'number' ? (props.value || 0) : 0)
 const booleanValue = ref(props.type === 'boolean' ? (props.value !== undefined ? props.value : true) : true)
 const listValue = ref(props.type === 'list' ? (props.value || []) : [])
 const mapValue = ref(props.type === 'map' ? (props.value || {}) : {})
+const isCollapsed = ref(false)
+
+const toggleCollapse = () => {
+  isCollapsed.value = !isCollapsed.value
+}
 
 const updateKey = () => {
   emit('update:key', localKey.value)
@@ -122,18 +146,23 @@ const handleTypeChange = () => {
   if (localType.value === 'string') {
     stringValue.value = ''
     emit('update:value', '')
+    isCollapsed.value = false
   } else if (localType.value === 'number') {
     numberValue.value = 0
     emit('update:value', 0)
+    isCollapsed.value = false
   } else if (localType.value === 'boolean') {
     booleanValue.value = true
     emit('update:value', true)
+    isCollapsed.value = false
   } else if (localType.value === 'list') {
     listValue.value = []
     emit('update:value', [])
+    isCollapsed.value = false
   } else if (localType.value === 'map') {
     mapValue.value = {}
     emit('update:value', {})
+    isCollapsed.value = false
   }
 }
 
@@ -163,8 +192,23 @@ watch(() => props.keyProp, (newVal) => {
 })
 
 watch(() => props.type, (newVal) => {
-  localType.value = newVal
-})
+  // 确保 localType 始终与 props.type 同步
+  if (newVal) {
+    localType.value = newVal
+    // 当类型变化时，同步更新对应的值
+    if (newVal === 'string') {
+      stringValue.value = props.value || ''
+    } else if (newVal === 'number') {
+      numberValue.value = props.value || 0
+    } else if (newVal === 'boolean') {
+      booleanValue.value = props.value !== undefined ? props.value : true
+    } else if (newVal === 'list') {
+      listValue.value = props.value || []
+    } else if (newVal === 'map') {
+      mapValue.value = props.value || {}
+    }
+  }
+}, { immediate: true })
 
 watch(() => props.value, (newVal) => {
   if (props.type === 'string') {
@@ -202,6 +246,34 @@ watch(() => props.value, (newVal) => {
 
 .param-value-input {
   margin-top: 8px;
+}
+
+.collapse-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.collapse-btn:hover {
+  background: #f0f0f0;
+}
+
+.collapse-icon {
+  display: inline-block;
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.2s ease;
+  user-select: none;
+}
+
+.collapse-icon.collapsed {
+  transform: rotate(-90deg);
 }
 </style>
 
