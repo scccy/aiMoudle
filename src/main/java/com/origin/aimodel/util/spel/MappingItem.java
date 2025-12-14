@@ -15,4 +15,5 @@ public class MappingItem {
     public String defaultValue;
     public String valueObject;
     public String validate;
+    public String valueSource;
 }

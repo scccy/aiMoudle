@@ -85,6 +85,12 @@ public class DimAiModelItemMp extends BaseEntity<DimAiModelItemMp> {
     private String valueObject;
 
     /**
+     * 值来源：CONST | USER | DERIVED
+     */
+    @TableField("value_source")
+    private String valueSource;
+
+    /**
      * 校验规则，JSON 字符串格式
      * 示例：{"maxLength": 2000} 或 {"range": [0.0, 2.0]} 或 {"enum": ["text", "image_url"]}
      */

@@ -115,6 +115,7 @@ public class ReverseDslFactory {
                     item.setNode(key);
                     item.setPostParam(key);
                     item.setValueObject("list<json>");
+                    item.setValueSource("USER");
                     
                     String spelTemp = generateSpelTempFromRepeatedStructure(key, analysis);
                     if (spelTemp != null) {
@@ -406,6 +407,8 @@ public class ReverseDslFactory {
         
         // 统一方法：根据 value_object 类型设置 category
         fieldItem.category = inferCategoryFromValueObjectType(valueObjectType);
+        // 默认值来源：如果值完全一致则视为常量，否则用户输入
+        fieldItem.valueSource = fieldInfo.hasCommonValue() ? "CONST" : "USER";
         
         fieldItem.node = nodePath;
         fieldItem.postParam = fieldName;
@@ -432,15 +435,9 @@ public class ReverseDslFactory {
             }
         }
         
-        // 设置 defaultValue：如果所有值都相同，或者只有一个值
+        // 仅在所有值相同的情况下设置 defaultValue，避免多样值被当作常量
         if (fieldInfo.hasCommonValue()) {
             fieldItem.defaultValue = fieldInfo.getCommonValue();
-        } else if (fieldInfo.getValues().size() == 1) {
-            // 如果只有一个值，也设置为 defaultValue
-            Object singleValue = fieldInfo.getValues().get(0);
-            if (singleValue != null) {
-                fieldItem.defaultValue = singleValue.toString();
-            }
         }
         
         return fieldItem;
@@ -498,14 +495,19 @@ public class ReverseDslFactory {
      * 统一方法：为 map/json 类型的字段生成 spel_temp
      */
     private static String generateSpelTempForMapField(FieldInfo fieldInfo, ListAnalysisResult analysis) {
+        List<Map<?, ?>> samples = fieldInfo.getMapSamples();
         Map<?, ?> mapValue = fieldInfo.getMapValue();
-        if (mapValue == null || mapValue.isEmpty()) {
+        if ((samples == null || samples.isEmpty()) && (mapValue == null || mapValue.isEmpty())) {
             return null;
         }
         
-        // 分析 Map 的内部结构
+        // 分析 Map 的内部结构，优先使用全部样本以避免把不同值当作常量
         Map<String, FieldInfo> nestedFields = new java.util.HashMap<>();
-        analyzeMapFields(mapValue, "", nestedFields);
+        if (samples != null && !samples.isEmpty()) {
+            analyzeCommonFields(samples, nestedFields);
+        } else {
+            analyzeMapFields(mapValue, "", nestedFields);
+        }
         
         // 生成嵌套的 spel_temp，需要递归处理嵌套的 list<json> 和 map
         List<MappingItem> nestedParamItems = buildNestedMappingItems(nestedFields, analysis);
@@ -656,6 +658,7 @@ public class ReverseDslFactory {
             if (item.valueObject != null) obj.put("value_object", item.valueObject);
             if (item.defaultValue != null) obj.put("default_value", item.defaultValue);
             if (item.validate != null) obj.put("validate", item.validate);
+            if (item.valueSource != null) obj.put("value_source", item.valueSource);
             // 重要：需要包含嵌套的 spel_temp，以支持三级及以上的嵌套结构
             // 例如：dynamic_masks -> trajectories -> 更深层的嵌套
             if (item.spelTemp != null && !item.spelTemp.trim().isEmpty()) {
@@ -742,7 +745,8 @@ public class ReverseDslFactory {
             if (value instanceof Map && !((Map<?, ?>) value).isEmpty()) {
                 // Map 类型的值：记录字段本身是 map 类型，并递归分析其内部结构
                 fieldInfo.setType("map");
-                fieldInfo.setMapValue((Map<?, ?>) value); // 保存 Map 值用于后续生成 spel_temp
+                fieldInfo.setMapValue((Map<?, ?>) value); // 保存一个样本
+                fieldInfo.addMapSample((Map<?, ?>) value); // 收集所有样本，便于聚合值
                 analyzeMapFields((Map<?, ?>) value, fieldPath, fieldInfos);
             } else if (value instanceof List) {
                 // List 类型的值：检查是否包含 Map 元素
@@ -875,6 +879,7 @@ public class ReverseDslFactory {
         private String type = "string";
         private Map<?, ?> mapValue; // 用于存储 Map 类型的值，用于生成嵌套 spel_temp
         private List<?> listValue; // 用于存储 List 类型的值，用于生成嵌套 spel_temp
+        private final List<Map<?, ?>> mapSamples = new ArrayList<>(); // 收集 Map 样本，便于聚合多个值
         
         public FieldInfo() {
         }
@@ -893,6 +898,16 @@ public class ReverseDslFactory {
         
         public Map<?, ?> getMapValue() {
             return mapValue;
+        }
+
+        public void addMapSample(Map<?, ?> mapSample) {
+            if (mapSample != null) {
+                this.mapSamples.add(mapSample);
+            }
+        }
+
+        public List<Map<?, ?>> getMapSamples() {
+            return mapSamples;
         }
         
         public void setListValue(List<?> listValue) {
@@ -976,6 +991,7 @@ public class ReverseDslFactory {
             item.setNode(headerName);
             item.setPostParam(headerName);
             item.setValueObject("string");
+            item.setValueSource("USER");
             if (StringUtils.hasText(headerValue)) {
                 item.setDefaultValue(headerValue);
             }
@@ -992,6 +1008,7 @@ public class ReverseDslFactory {
         MappingItem item = new MappingItem();
         item.setKey(key);
         item.setNode(nodePath);
+        item.setValueSource("USER");
         
         // 推断 category 和 valueObject
         if (value instanceof List) {

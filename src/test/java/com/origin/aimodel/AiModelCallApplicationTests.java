@@ -3,7 +3,9 @@ package com.origin.aimodel;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.origin.aimodel.domain.vo.AiTaskQuery;
-import com.origin.aimodel.util.spel.PostDsl;
+import com.origin.aimodel.domain.vo.ReverseParseRequest;
+import com.origin.aimodel.domain.vo.ReverseParseResponse;
+import com.origin.aimodel.service.ReverseParseService;
 import com.origin.aimodel.util.spel.ReverseDsl;
 import com.origin.aimodel.util.spel.demo.SpelDemo;
 import com.origin.aimodel.util.spel.demo.SpelDemoNew;
@@ -28,6 +30,9 @@ class AiModelCallApplicationTests {
     
     @Autowired
     SpelDemoThreeNew spelDemoThreeNew;
+
+    @Autowired
+    ReverseParseService reverseParseService;
 
     @Test
     void testExampleOne() {
@@ -257,5 +262,47 @@ class AiModelCallApplicationTests {
         System.out.println(generatedHeaderItem.toJSONString());
     }
 
+    /**
+     * 验证 Ark curl 示例在反向解析后能展开 content 列表的子字段，并带上 spel_temp
+     */
+    @Test
+    void reverseParseArkContentList() {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "doubao-seedance-1-0-lite-i2v-250428");
 
+        List<Map<String, Object>> contentList = new ArrayList<>();
+        Map<String, Object> textPart = new HashMap<>();
+        textPart.put("type", "text");
+        textPart.put("text", "[图1]戴着眼镜穿着蓝色T恤的男生和[图2]的柯基小狗，坐在[图3]的草坪上，3D卡通风格");
+        contentList.add(textPart);
+
+        contentList.add(buildImagePart("https://ark-project.tos-cn-beijing.volces.com/doc_image/seelite_ref_1.png", "user3"));
+        contentList.add(buildImagePart("https://ark-project.tos-cn-beijing.volces.com/doc_image/seelite_ref_2.png", "user2"));
+        contentList.add(buildImagePart("https://ark-project.tos-cn-beijing.volces.com/doc_image/seelite_ref_3.png", "user1"));
+        requestBody.put("content", contentList);
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json");
+        headers.put("Authorization", "Bearer $ARK_API_KEY");
+
+        ReverseParseRequest request = new ReverseParseRequest();
+        request.setRequestBody(requestBody);
+        request.setRequestHeaders(headers);
+
+        ReverseParseResponse response = reverseParseService.generateConfig(request);
+        System.out.println("==== ParamItems ====");
+        response.getParamItems().forEach(item -> System.out.println(JSONObject.toJSONString(item)));
+        System.out.println("==== HeaderItems ====");
+        response.getHeaderItems().forEach(item -> System.out.println(JSONObject.toJSONString(item)));
+    }
+
+    private Map<String, Object> buildImagePart(String url, String role) {
+        Map<String, Object> imagePart = new HashMap<>();
+        imagePart.put("type", "image_url");
+        Map<String, Object> imageUrl = new HashMap<>();
+        imageUrl.put("url", url);
+        imagePart.put("image_url", imageUrl);
+        imagePart.put("role", role);
+        return imagePart;
+    }
 }

@@ -65,62 +65,6 @@ export const updateItemDetail = async (itemId, data) => {
 }
 
 /**
- * 创建字典映射
- * @param {Object} data - 映射数据
- * @param {string} data.key - key
- * @param {string} data.postParam - post_param
- * @param {string} data.description - 中文说明
- * @param {string|number} data.itemId - item id
- * @returns {Promise}
- */
-export const createDictionary = async (data) => {
-  try {
-    const response = await axios.post(`${API_BASE_URL}/create`, data)
-    return response.data
-  } catch (error) {
-    console.error('Create dictionary error:', error)
-    throw error
-  }
-}
-
-/**
- * 更新字典映射
- * @param {Object} data - 映射数据
- * @param {string} data.key - key
- * @param {string} data.postParam - post_param
- * @param {string} data.description - 中文说明
- * @param {string|number} data.itemId - item id
- * @returns {Promise}
- */
-export const updateDictionary = async (data) => {
-  try {
-    const response = await axios.put(`${API_BASE_URL}/update`, data)
-    return response.data
-  } catch (error) {
-    console.error('Update dictionary error:', error)
-    throw error
-  }
-}
-
-/**
- * 删除字典映射
- * @param {string} key - key
- * @param {string} postParam - post_param
- * @returns {Promise}
- */
-export const deleteDictionary = async (key, postParam) => {
-  try {
-    const response = await axios.delete(`${API_BASE_URL}/delete`, {
-      params: { key, postParam }
-    })
-    return response.data
-  } catch (error) {
-    console.error('Delete dictionary error:', error)
-    throw error
-  }
-}
-
-/**
  * 获取字典查询选项（用于下拉选择框）
  * @returns {Promise}
  */

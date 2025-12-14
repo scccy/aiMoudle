@@ -22,6 +22,9 @@ public class PayloadEngine {
         Map<String, Object> root = new LinkedHashMap<>();
         for (MappingItem entry : entries) {
             Object value = payload.get(entry.getKey());
+            if (value == null && entry.getNode() != null) {
+                value = getValueByPath(payload, entry.getNode());
+            }
             if (value == null) {
                 value = entry.getDefaultValue() != null ? normalizeDefaultValue(entry.getDefaultValue()) : null;
             }
@@ -332,10 +335,60 @@ public class PayloadEngine {
             Map<String, Object> child = (Map<String, Object>) list.get(token.wildcard ? list.size() - 1 : token.index);
             return child;
         } else {
+            Object existing = parent.get(token.name);
+            if (existing instanceof List<?> existingList) {
+                // 当上一次写入的是 list，但本次需要进入其元素，取第一个元素的 map；没有则创建
+                List<Object> list = (List<Object>) existingList;
+                if (list.isEmpty() || !(list.get(0) instanceof Map)) {
+                    if (list.isEmpty()) {
+                        list.add(new LinkedHashMap<String, Object>());
+                    } else {
+                        list.set(0, new LinkedHashMap<String, Object>());
+                    }
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> child = (Map<String, Object>) list.get(0);
+                return child;
+            }
             @SuppressWarnings("unchecked")
             Map<String, Object> child = (Map<String, Object>) parent.computeIfAbsent(token.name, k -> new LinkedHashMap<String, Object>());
             return child;
         }
+    }
+
+    /**
+     * 按 node 路径从已有 payload 中提取值（用于前端已传完整层级时的反查）
+     * 遇到 List 时取首个元素继续下钻。
+     */
+    @SuppressWarnings("unchecked")
+    private static Object getValueByPath(Map<String, Object> payload, String path) {
+        if (payload == null || path == null || path.isEmpty()) {
+            return null;
+        }
+        String[] parts = path.split("\\.");
+        Object current = payload;
+        for (String part : parts) {
+            if (current == null) {
+                return null;
+            }
+            if (current instanceof Map<?, ?> map) {
+                current = map.get(part);
+            } else if (current instanceof List<?> list) {
+                if (list.isEmpty()) {
+                    return null;
+                }
+                current = list.get(0);
+                // 重新处理同一个 part 针对 list 元素（因为 list 元素应该是 map）
+                if (current instanceof Map<?, ?> innerMap) {
+                    current = ((Map<String, Object>) innerMap).get(part);
+                } else {
+                    return current;
+                }
+            } else {
+                return null;
+            }
+        }
+        return current;
     }
     
     private static String formatHeaderResult(List<String> items) {
@@ -409,10 +462,6 @@ public class PayloadEngine {
                 
                 // spel_temp 中的 node 是相对路径（相对于父级 node）
                 // 需要将父级 node（如 "content"）与相对路径（如 "type"）组合成完整路径（如 "content.type"）
-                if (node != null && !node.isEmpty() && parentNode != null && !parentNode.isEmpty()) {
-                    node = parentNode + "." + node;
-                }
-                
                 // 从传入的value中获取对应的值
                 Object itemValue = null;
                 if (value instanceof Map<?, ?> valueMap) {

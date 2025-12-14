@@ -19,6 +19,8 @@ import org.springframework.util.StringUtils;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 import com.alibaba.fastjson2.JSON;
 
@@ -140,39 +142,7 @@ public class ForwardRequestServiceImpl implements ForwardRequestService {
 
         List<DimAiModelItemMp> items = dimAiModelItemMpService.list(wrapper);
 
-        // 根据 item 的 key、category 生成基础请求参数
-        Map<String, Object> baseParams = new LinkedHashMap<>();
-        
-        for (DimAiModelItemMp item : items) {
-            if (!StringUtils.hasText(item.getItemKey())) {
-                continue;
-            }
-            
-            Object defaultValue = null;
-            String category = item.getCategory() != null ? item.getCategory() : "key";
-            String valueObject = item.getValueObject() != null ? item.getValueObject() : "string";
-            
-            // 根据 category 确定参数结构类型
-            if ("map".equals(category)) {
-                // map 类型，初始化为空对象
-                defaultValue = new LinkedHashMap<>();
-            } else if ("list".equals(category)) {
-                // list 类型，初始化为空数组
-                defaultValue = new java.util.ArrayList<>();
-            } else {
-                // key 类型，根据 valueObject 和 defaultValue 确定默认值
-                if (StringUtils.hasText(item.getDefaultValue())) {
-                    defaultValue = parseDefaultValue(item.getDefaultValue(), valueObject);
-                } else {
-                    // 没有默认值，根据 valueObject 设置初始值
-                    defaultValue = getInitialValueByType(valueObject);
-                }
-            }
-            
-            baseParams.put(item.getItemKey(), defaultValue);
-        }
-        
-        return baseParams;
+        return buildBasePayloadByNode(items);
     }
     
     /**
@@ -230,6 +200,122 @@ public class ForwardRequestServiceImpl implements ForwardRequestService {
             return false;
         } else {
             return "";
+        }
+    }
+
+    /**
+     * 根据 node + category 还原层级结构
+     */
+    private Map<String, Object> buildBasePayloadByNode(List<DimAiModelItemMp> items) {
+        Map<String, Object> root = new LinkedHashMap<>();
+        if (CollectionUtils.isEmpty(items)) {
+            return root;
+        }
+
+        // 记录哪些路径是 list / map，用于构造容器
+        Set<String> listPaths = new HashSet<>();
+        Set<String> mapPaths = new HashSet<>();
+        for (DimAiModelItemMp item : items) {
+            String path = resolvePath(item);
+            String category = item.getCategory() != null ? item.getCategory() : "key";
+            if (!StringUtils.hasText(path)) {
+                continue;
+            }
+            if ("list".equalsIgnoreCase(category)) {
+                listPaths.add(path);
+            } else if ("map".equalsIgnoreCase(category)) {
+                mapPaths.add(path);
+            }
+        }
+
+        for (DimAiModelItemMp item : items) {
+            String path = resolvePath(item);
+            if (!StringUtils.hasText(path)) {
+                continue;
+            }
+            String category = item.getCategory() != null ? item.getCategory() : "key";
+            String valueObject = item.getValueObject() != null ? item.getValueObject() : "string";
+            Object value;
+            if ("list".equalsIgnoreCase(category)) {
+                value = new java.util.ArrayList<>();
+            } else if ("map".equalsIgnoreCase(category)) {
+                value = new LinkedHashMap<>();
+            } else {
+                if (StringUtils.hasText(item.getDefaultValue())) {
+                    value = parseDefaultValue(item.getDefaultValue(), valueObject);
+                } else {
+                    value = getInitialValueByType(valueObject);
+                }
+            }
+            applyValueByPath(root, path, value, listPaths, mapPaths);
+        }
+
+        return root;
+    }
+
+    private String resolvePath(DimAiModelItemMp item) {
+        if (StringUtils.hasText(item.getNode())) {
+            return item.getNode();
+        }
+        if (StringUtils.hasText(item.getPostParam())) {
+            return item.getPostParam();
+        }
+        return item.getItemKey();
+    }
+
+    /**
+     * 根据 path 写入值，自动创建 map/list 容器。
+     * list 路径采用“模板第一个元素”的方式填充。
+     */
+    private void applyValueByPath(Map<String, Object> root,
+                                  String path,
+                                  Object value,
+                                  Set<String> listPaths,
+                                  Set<String> mapPaths) {
+        String[] parts = path.split("\\.");
+        Map<String, Object> current = root;
+        StringBuilder acc = new StringBuilder();
+
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            if (acc.length() > 0) {
+                acc.append(".").append(part);
+            } else {
+                acc.append(part);
+            }
+            boolean isLast = (i == parts.length - 1);
+            String accPath = acc.toString();
+
+            if (isLast) {
+                current.put(part, value);
+                return;
+            }
+
+            if (listPaths.contains(accPath)) {
+                Object container = current.get(part);
+                if (!(container instanceof List)) {
+                    container = new java.util.ArrayList<>();
+                    current.put(part, container);
+                }
+                List<?> list = (List<?>) container;
+                if (list.isEmpty()) {
+                    list = new java.util.ArrayList<>();
+                    ((List<Object>) container).add(new LinkedHashMap<>());
+                }
+                Object first = ((List<?>) container).get(0);
+                if (!(first instanceof Map)) {
+                    first = new LinkedHashMap<>();
+                    ((List<Object>) container).set(0, first);
+                }
+                current = (Map<String, Object>) first;
+            } else {
+                Object container = current.get(part);
+                if (!(container instanceof Map)) {
+                    container = new LinkedHashMap<>();
+                    current.put(part, container);
+                }
+                current = (Map<String, Object>) container;
+            }
         }
     }
 

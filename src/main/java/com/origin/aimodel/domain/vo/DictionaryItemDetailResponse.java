@@ -62,6 +62,11 @@ public class DictionaryItemDetailResponse {
     private String valueObject;
 
     /**
+     * 值来源：CONST | USER | DERIVED
+     */
+    private String valueSource;
+
+    /**
      * 校验规则，JSON 字符串格式
      */
     private String validate;
@@ -71,4 +76,3 @@ public class DictionaryItemDetailResponse {
      */
     private Integer sortOrder;
 }
-

@@ -80,6 +80,7 @@ public final class ReverseDsl {
                 if (item.spelTemp != null) obj.put("spel_temp", item.spelTemp);
                 if (item.defaultValue != null) obj.put("default_value", item.defaultValue);
                 if (item.validate != null) obj.put("validate", item.validate);
+                if (item.valueSource != null) obj.put("value_source", item.valueSource);
                 paramItems.add(obj);
             }
             result.put("paramItem", paramItems);
@@ -126,6 +127,7 @@ public final class ReverseDsl {
                 if (item.spelTemp != null) obj.put("spel_temp", item.spelTemp);
                 if (item.defaultValue != null) obj.put("default_value", item.defaultValue);
                 if (item.validate != null) obj.put("validate", item.validate);
+                if (item.valueSource != null) obj.put("value_source", item.valueSource);
                 headerItems.add(obj);
             }
             result.put("headerItem", headerItems);

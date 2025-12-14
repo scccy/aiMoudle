@@ -6,6 +6,8 @@ import com.alibaba.fastjson2.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.HashSet;
 
 /**
  * 反向解析工具：第二层（业务逻辑层）
@@ -30,12 +32,12 @@ public class ReverseParser {
         
         // 如果没有自定义映射配置，直接返回基础映射
         if (mappingConfig == null) {
-            return baseItems;
+            return flattenMappingItems(baseItems);
         }
         
         JSONArray mappingItems = mappingConfig.getJSONArray("paramItem");
         if (mappingItems == null || mappingItems.isEmpty()) {
-            return baseItems;
+            return flattenMappingItems(baseItems);
         }
         
         // 第二步：根据自定义映射配置，从基础映射中筛选或合并
@@ -61,6 +63,7 @@ public class ReverseParser {
                 resultItem.valueObject = matchedItem.valueObject;
                 resultItem.spelTemp = matchedItem.spelTemp;
                 resultItem.defaultValue = matchedItem.defaultValue;
+                resultItem.valueSource = matchedItem.valueSource;
                 
                 // 应用自定义 validate
                 if (validate != null) {
@@ -84,6 +87,7 @@ public class ReverseParser {
                 resultItem.node = nodePath != null ? nodePath : (postParam != null ? postParam : key);
                 resultItem.postParam = postParam != null ? postParam : key;
                 resultItem.valueObject = "string";
+                resultItem.valueSource = "USER";
                 
                 // 应用自定义 validate
                 if (validate != null) {
@@ -100,7 +104,7 @@ public class ReverseParser {
             }
         }
         
-        return resultItems;
+        return flattenMappingItems(resultItems);
     }
     
     /**
@@ -116,12 +120,12 @@ public class ReverseParser {
         
         // 如果没有自定义映射配置，直接返回基础映射
         if (mappingConfig == null) {
-            return baseItems;
+            return flattenMappingItems(baseItems);
         }
         
         JSONArray mappingItems = mappingConfig.getJSONArray("headerItem");
         if (mappingItems == null || mappingItems.isEmpty()) {
-            return baseItems;
+            return flattenMappingItems(baseItems);
         }
         
         // 第二步：根据自定义映射配置，从基础映射中筛选或合并
@@ -155,6 +159,7 @@ public class ReverseParser {
                 resultItem.postParam = nodePath != null ? nodePath : matchedItem.postParam;
                 resultItem.valueObject = matchedItem.valueObject;
                 resultItem.defaultValue = matchedItem.defaultValue;
+                resultItem.valueSource = matchedItem.valueSource;
                 resultItems.add(resultItem);
             } else {
                 // 如果没有找到匹配项，创建一个新项
@@ -164,6 +169,7 @@ public class ReverseParser {
                 resultItem.node = nodePath != null ? nodePath : key;
                 resultItem.postParam = nodePath != null ? nodePath : key;
                 resultItem.valueObject = "string";
+                resultItem.valueSource = "USER";
         
                 // 从请求头中获取值作为默认值
                 if (requestHeaders != null && nodePath != null) {
@@ -186,7 +192,7 @@ public class ReverseParser {
                     }
         }
         
-        return resultItems;
+        return flattenMappingItems(resultItems);
     }
     
     /**
@@ -219,5 +225,134 @@ public class ReverseParser {
         }
         
         return null;
+    }
+
+    /**
+     * 扁平化 MappingItem 列表，展开 spel_temp 中的嵌套字段，node 使用全路径
+     */
+    private static List<MappingItem> flattenMappingItems(List<MappingItem> items) {
+        if (items == null || items.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<String, MappingItem> dedup = new LinkedHashMap<>();
+        for (MappingItem item : items) {
+            flattenMappingItem(item, item != null ? item.node : null, item != null ? item.category : null, dedup);
+        }
+        return new ArrayList<>(dedup.values());
+    }
+
+    private static void flattenMappingItem(MappingItem item, String parentNode, String parentCategory, Map<String, MappingItem> out) {
+        if (item == null || item.key == null || item.key.isEmpty()) {
+            return;
+        }
+        String dedupKey = buildDedupKey(item.key, item.node, item.postParam);
+        if (out.containsKey(dedupKey)) {
+            return;
+        }
+        MappingItem copy = new MappingItem();
+        copy.key = item.key;
+        copy.category = item.category;
+        copy.node = item.node;
+        copy.postParam = item.postParam;
+        copy.spelTemp = item.spelTemp;
+        copy.defaultValue = item.defaultValue;
+        copy.valueObject = item.valueObject;
+        copy.validate = item.validate;
+        copy.valueSource = item.valueSource;
+        out.put(dedupKey, copy);
+
+        List<MappingItem> nestedItems = parseNestedMappingItems(item.spelTemp);
+        if (!nestedItems.isEmpty()) {
+            String parentPath = buildParentPath(parentNode, parentCategory);
+            for (MappingItem nested : nestedItems) {
+                String childNode = buildChildNode(parentPath, nested.node);
+                MappingItem flattened = new MappingItem();
+                flattened.key = nested.key;
+                flattened.category = nested.category;
+                flattened.node = childNode;
+                flattened.postParam = nested.postParam;
+                flattened.spelTemp = nested.spelTemp;
+                flattened.defaultValue = nested.defaultValue;
+                flattened.valueObject = nested.valueObject;
+                flattened.validate = nested.validate;
+                flattened.valueSource = nested.valueSource;
+                flattenMappingItem(flattened, childNode, nested.category, out);
+            }
+        }
+    }
+
+    private static String buildParentPath(String parentNode, String parentCategory) {
+        if (parentNode == null || parentNode.isEmpty()) {
+            return "";
+        }
+        return parentNode;
+    }
+
+    private static String buildChildNode(String parentPath, String childNode) {
+        if (parentPath == null || parentPath.isEmpty()) {
+            return childNode != null ? childNode : "";
+        }
+        if (childNode == null || childNode.isEmpty()) {
+            return parentPath;
+        }
+        if (childNode.startsWith(".")) {
+            return parentPath + childNode;
+        }
+        return parentPath + "." + childNode;
+    }
+
+    /**
+     * 解析 spel_temp 的嵌套 paramItem
+     */
+    private static List<MappingItem> parseNestedMappingItems(String spelTemp) {
+        if (spelTemp == null || spelTemp.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        String normalized = spelTemp.trim();
+        JSONObject spelJson = null;
+        try {
+            spelJson = JSONObject.parseObject(normalized);
+        } catch (Exception parseErr) {
+            try {
+                String unescaped = normalized.replace("\\\"", "\"");
+                spelJson = JSONObject.parseObject(unescaped);
+            } catch (Exception retryErr) {
+                return new ArrayList<>();
+            }
+        }
+
+        JSONArray paramItems = spelJson.getJSONArray("paramItem");
+        if (paramItems == null || paramItems.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<MappingItem> nestedItems = new ArrayList<>();
+        for (int i = 0; i < paramItems.size(); i++) {
+            JSONObject obj = paramItems.getJSONObject(i);
+            if (obj == null) {
+                continue;
+            }
+            MappingItem nested = new MappingItem();
+            nested.key = obj.getString("key");
+            nested.category = obj.getString("category");
+            nested.node = obj.getString("node");
+            nested.postParam = obj.getString("post_param");
+            nested.spelTemp = obj.getString("spel_temp");
+            nested.defaultValue = obj.getString("default_value");
+            nested.valueObject = obj.getString("value_object");
+            nested.validate = obj.getString("validate");
+            nested.valueSource = obj.getString("value_source");
+            nestedItems.add(nested);
+        }
+        return nestedItems;
+    }
+
+    private static String buildDedupKey(String key, String node, String postParam) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(key != null ? key : "");
+        sb.append("|");
+        sb.append(node != null ? node : "");
+        sb.append("|");
+        sb.append(postParam != null ? postParam : "");
+        return sb.toString();
     }
 }
