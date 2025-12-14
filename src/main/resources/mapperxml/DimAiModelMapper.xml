@@ -24,7 +24,7 @@
         origin_name,
         base_url,
         point,
-        authorization,
+        `authorization`,
         created_by,
         created_time,
         updated_by,

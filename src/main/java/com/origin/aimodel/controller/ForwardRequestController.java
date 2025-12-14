@@ -2,18 +2,10 @@ package com.origin.aimodel.controller;
 
 import com.origin.aimodel.base.ResultData;
 import com.origin.aimodel.domain.vo.ForwardGenerateRequest;
-import com.origin.aimodel.domain.vo.ForwardModelVO;
-import com.origin.aimodel.domain.vo.ForwardRequestResult;
 import com.origin.aimodel.service.ForwardRequestService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 正向请求相关接口
@@ -22,13 +14,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/ai-model")
 public class ForwardRequestController {
-
-    private final ForwardRequestService forwardRequestService;
-
     @Autowired
-    public ForwardRequestController(ForwardRequestService forwardRequestService) {
-        this.forwardRequestService = forwardRequestService;
-    }
+    ForwardRequestService forwardRequestService;
+
+
+
 
     /**
      * 获取模型列表（用于前端下拉选择）

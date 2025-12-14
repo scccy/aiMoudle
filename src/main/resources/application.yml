@@ -42,3 +42,9 @@ mybatis-plus:
       logic-not-delete-value: 0
   mapper-locations: classpath*:/mapperxml/**/*.xml
   type-aliases-package: com.origin.**.entity
+
+logging:
+  file:
+    name: ./logs/ai-model-call.log
+  level:
+    com.origin.aimodel.config: INFO

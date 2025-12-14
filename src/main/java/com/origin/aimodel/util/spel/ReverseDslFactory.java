@@ -828,10 +828,11 @@ public class ReverseDslFactory {
         if (value instanceof String) return "string";
         if (value instanceof Integer) return "int";
         if (value instanceof Long) return "long";
-        if (value instanceof java.math.BigDecimal) return "decimal";
+        // BigDecimal 统一识别为 double，与前端保持一致
+        if (value instanceof java.math.BigDecimal) return "double";
         if (value instanceof Boolean) return "boolean";
         if (value instanceof Double || value instanceof Float) return "double";
-        if (value instanceof Map) return "json";
+        if (value instanceof Map) return "map"; // 统一使用 "map"，与前端保持一致
         if (value instanceof List) return "list";
         return "string";
     }
@@ -1009,6 +1010,7 @@ public class ReverseDslFactory {
             }
         } else if (value instanceof Map) {
             item.setCategory("map");
+            // 统一使用 "map"，与前端保持一致（前端有 map 和 json 两个选项，但后端统一识别为 map）
             item.setValueObject("map");
         } else {
             item.setCategory("key");
